@@ -6,14 +6,14 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
+ * Sets prefix for property names in .property file
+ *
  * 12.02.13 11:23
  *
  * @author xBlackCat
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE})
-public @interface SettingsPropertiesSource {
+public @interface SettingsPrefix {
     String value();
-
-    String prefix() default "";
 }

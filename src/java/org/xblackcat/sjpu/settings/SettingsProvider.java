@@ -5,7 +5,6 @@ import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.xblackcat.sjpu.utils.ClassUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -13,7 +12,6 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -25,19 +23,37 @@ import java.util.*;
 public final class SettingsProvider {
     private static final Log log = LogFactory.getLog(SettingsProvider.class);
 
-    public static <T> T get(Class<T> clazz) throws SettingsException {
-        return loadDefaults(clazz);
+    /**
+     * Loads settings for specified interface from specified InputStream. Input stream remains open after reading.
+     *
+     * @param clazz target interface class for holding settings.
+     * @param <T>   target interface for holding settings.
+     * @return initialized implementation of the specified interface class.
+     * @throws SettingsException if interface methods are not annotated or settings can't be read.
+     */
+    public static <T> T get(Class<T> clazz, InputStream is) throws SettingsException, IOException {
+        return loadDefaults(clazz, is);
     }
 
-    private static <T> T loadDefaults(Class<T> clazz) throws SettingsException {
-        if (log.isDebugEnabled()) {
-            log.debug("Load defaults for class " + clazz.getName());
-        }
-
-        final SettingsPropertiesSource sourceAnn = clazz.getAnnotation(SettingsPropertiesSource.class);
+    /**
+     * Loads settings for specified interface. A default location of resource file is used. Default location is specified
+     * by {@linkplain org.xblackcat.sjpu.settings.SettingsSource @SettingsSource} annotation.
+     *
+     * @param clazz target interface class for holding settings.
+     * @param <T>   target interface for holding settings.
+     * @return initialized implementation of the specified interface class.
+     * @throws SettingsException if interface methods are not annotated or interface is not annotated with
+     *                           {@linkplain org.xblackcat.sjpu.settings.SettingsSource @SettingsSource}
+     */
+    public static <T> T get(Class<T> clazz) throws SettingsException {
+        final SettingsSource sourceAnn = clazz.getAnnotation(SettingsSource.class);
 
         if (sourceAnn == null) {
-            throw new SettingsException("Class " + clazz.getName() + " is not annotated");
+            throw new SettingsException(
+                    "No default source is specified for " +
+                            clazz.getName() +
+                            ". Should be annotated with @SettingsSource annotation"
+            );
         }
 
         final String propertiesFile = sourceAnn.value();
@@ -45,28 +61,54 @@ public final class SettingsProvider {
             log.debug("Load properites from " + propertiesFile);
         }
 
-        Properties properties;
+        InputStream is = null;
         try {
-            InputStream is;
-            try {
-                is = getInputStream(propertiesFile);
-            } catch (MissingResourceException e) {
-                if (propertiesFile.toLowerCase().endsWith(".properties")) {
-                    throw e;
+            if (!propertiesFile.endsWith(".properties")) {
+                try {
+                    is = ClassUtils.getInputStream(propertiesFile + ".properties");
+                } catch (MissingResourceException e) {
+                    // Not found
                 }
-                is = getInputStream((new StringBuilder()).append(propertiesFile).append(".properties").toString());
             }
-            properties = new Properties();
-            properties.load(new InputStreamReader(is, StandardCharsets.UTF_8));
+
+            if (is == null) {
+                // Will throw MissingResourceException
+                is = ClassUtils.getInputStream(propertiesFile);
+            }
+
+            return loadDefaults(clazz, is);
         } catch (IOException e) {
             throw new SettingsException("Can't load values for " + clazz.getName(), e);
+        } finally {
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (IOException e) {
+                    log.warn("Can't close stream. [" + clazz.getName() + "]", e);
+                }
+            }
+        }
+    }
+
+    private static <T> T loadDefaults(Class<T> clazz, InputStream is) throws SettingsException, IOException {
+        if (log.isDebugEnabled()) {
+            log.debug("Load defaults for class " + clazz.getName());
         }
 
-        String prefixName = sourceAnn.prefix();
-        ClassPool pool = ClassPool.getDefault();
+        Properties properties = new Properties();
+        properties.load(new InputStreamReader(is, StandardCharsets.UTF_8));
 
-        if (log.isDebugEnabled()) {
-            log.debug("Prefix for property names is '" + prefixName + "'");
+        final String prefixName;
+        final ClassPool pool = ClassPool.getDefault();
+        final SettingsPrefix prefixAnn = clazz.getAnnotation(SettingsPrefix.class);
+        if (prefixAnn != null) {
+            prefixName = prefixAnn.value();
+
+            if (log.isDebugEnabled()) {
+                log.debug("Prefix for property names is '" + prefixName + "'");
+            }
+        } else {
+            prefixName = "";
         }
 
         @SuppressWarnings("unchecked") final Constructor<T> c = getSettingsConstructor(clazz, pool);
@@ -74,30 +116,6 @@ public final class SettingsProvider {
         List<Object> values = buildConstructorParameters(pool, clazz, properties, prefixName);
 
         return initialize(c, values);
-    }
-
-    private static InputStream getInputStream(String propertiesFile) throws IOException {
-        URL result;
-        URL url = SettingsProvider.class.getResource(propertiesFile);
-        if (url == null) {
-            url = SettingsProvider.class.getClassLoader().getResource(propertiesFile);
-        }
-        if (url == null) {
-            url = Thread.currentThread().getContextClassLoader().getResource(propertiesFile);
-        }
-        if (url == null) {
-            url = ClassLoader.getSystemResource(propertiesFile);
-        }
-        if (url == null) {
-            throw new MissingResourceException(
-                    "Can not find resource " + propertiesFile,
-                    SettingsProvider.class.getName(),
-                    propertiesFile
-            );
-        } else {
-            result = url;
-        }
-        return result.openStream();
     }
 
     static <T> T initialize(Constructor<T> c, List<Object> values) throws SettingsException {
@@ -130,12 +148,13 @@ public final class SettingsProvider {
                         groupField.value(),
                         properties,
                         prefixName,
-                        m
+                        m,
+                        m.getAnnotation(SettingsField.class).required()
                 );
             } else {
                 final Class<?> returnType = m.getReturnType();
                 if (returnType.isInterface()) {
-                    final String propertyName = getPropertyName(prefixName, m);
+                    final String propertyName = ClassUtils.buildPropertyName(prefixName, m);
 
                     @SuppressWarnings("unchecked") final Constructor<?> c = getSettingsConstructor(returnType, pool);
 
@@ -186,7 +205,7 @@ public final class SettingsProvider {
             Class<T> clazz,
             Properties properties,
             String prefixName,
-            Method m
+            Method m, boolean required
     ) throws SettingsException {
         final Class<?> returnType = m.getReturnType();
         if (Map.class != returnType) {
@@ -194,7 +213,7 @@ public final class SettingsProvider {
         }
         @SuppressWarnings("unchecked") final Constructor<T> c = getSettingsConstructor(clazz, pool);
 
-        final String propertyName = getPropertyName(prefixName, m);
+        final String propertyName = ClassUtils.buildPropertyName(prefixName, m);
         final String propertyNameDot = propertyName + ".";
 
         Set<String> propertyNames = new HashSet<>();
@@ -208,7 +227,7 @@ public final class SettingsProvider {
         // Search for possible prefixes
         Set<String> prefixes = new HashSet<>();
         for (Method mm : clazz.getMethods()) {
-            final String suffix = "." + getPropertyName(null, mm);
+            final String suffix = "." + ClassUtils.buildPropertyName(null, mm);
 
             for (String name : propertyNames) {
                 if (name.endsWith(suffix)) {
@@ -226,7 +245,7 @@ public final class SettingsProvider {
             }
         }
 
-        if (m.getAnnotation(SettingsField.class).required() && !prefixes.contains("")) {
+        if (required && !prefixes.contains("")) {
             throw new SettingsException("A default group set is required for method " + m.getName());
         }
 
@@ -270,11 +289,7 @@ public final class SettingsProvider {
 
         int idx = 1;
         for (Method m : clazz.getMethods()) {
-            final SettingsField field = m.getAnnotation(SettingsField.class);
             final String mName = m.getName();
-            if (field == null) {
-                throw new SettingsException("Method " + m.toString() + " is not annotated.");
-            }
 
             if (m.getParameterTypes().length > 0) {
                 throw new SettingsException(
@@ -286,7 +301,7 @@ public final class SettingsProvider {
 
             final Class<?> returnType = m.getReturnType();
 
-            final String fieldName = makeFieldName(mName);
+            final String fieldName = ClassUtils.makeFieldName(mName);
 
             if (log.isTraceEnabled()) {
                 log.trace("Generate a field " + fieldName + " for class " + clazz.getName());
@@ -371,14 +386,10 @@ public final class SettingsProvider {
     }
 
     @SuppressWarnings("unchecked")
-    static Object getSimpleFieldValue(
-            Properties properties,
-            String prefixName,
-            Method m
-    ) throws SettingsException {
+    static Object getSimpleFieldValue(Properties properties, String prefixName, Method m) throws SettingsException {
         final Class<?> returnType = m.getReturnType();
 
-        final String propertyName = getPropertyName(prefixName, m);
+        final String propertyName = ClassUtils.buildPropertyName(prefixName, m);
 
         String valueStr = properties.getProperty(propertyName);
         if (log.isTraceEnabled()) {
@@ -388,6 +399,11 @@ public final class SettingsProvider {
         if (valueStr == null) {
             // Check for default value
             final SettingsField field = m.getAnnotation(SettingsField.class);
+            if (field == null) {
+                // Default value is not defined
+                throw new SettingsException("Property " + propertyName + " is not set for method " + m.getName());
+            }
+
             final String defValue = field.defaultValue();
             if ("".equals(defValue) && field.required()) {
                 throw new SettingsException("Property " + propertyName + " is not set for method " + m.getName());
@@ -400,9 +416,18 @@ public final class SettingsProvider {
             valueStr = defValue;
         }
 
+        if (returnType.isPrimitive() && (valueStr == null || valueStr.length() == 0)) {
+            throw new SettingsException(
+                    "Default value should be set for primitive type with @SettingField annotation for method " +
+                            m.getName()
+            );
+        }
+
         final Object value;
         try {
-            if (String.class == returnType) {
+            if (valueStr == null) {
+                value = null;
+            } else if (String.class == returnType) {
                 value = valueStr;
             } else if (Integer.class == returnType || Integer.TYPE == returnType) {
                 value = Integer.parseInt(valueStr);
@@ -425,52 +450,5 @@ public final class SettingsProvider {
             throw new SettingsException("Can't parse value " + valueStr + " to type " + returnType.getName());
         }
         return value;
-    }
-
-    static String getPropertyName(String prefixName, Method m) {
-        StringBuilder propertyNameBuilder = new StringBuilder();
-        if (StringUtils.isNotBlank(prefixName)) {
-            propertyNameBuilder.append(prefixName);
-            propertyNameBuilder.append('.');
-        }
-
-        final SettingsField field = m.getAnnotation(SettingsField.class);
-        if (StringUtils.isNotBlank(field.value())) {
-            propertyNameBuilder.append(field.value());
-        } else {
-            final String fieldName = makeFieldName(m.getName());
-            boolean onHump = true;
-            // Generate a property name from field name
-            for (char c : fieldName.toCharArray()) {
-                if (Character.isUpperCase(c)) {
-                    if (!onHump) {
-                        propertyNameBuilder.append('.');
-                        onHump = true;
-                    }
-                } else {
-                    onHump = false;
-                }
-
-                propertyNameBuilder.append(Character.toLowerCase(c));
-            }
-        }
-
-        return propertyNameBuilder.toString();
-    }
-
-    static String makeFieldName(String mName) {
-        final String fieldName;
-        if (mName.startsWith("get") && mName.length() > 3) {
-            final char[] fn = mName.toCharArray();
-            fn[3] = Character.toLowerCase(fn[3]);
-            fieldName = new String(fn, 3, fn.length - 3);
-        } else if (mName.startsWith("is") && mName.length() > 2) {
-            final char[] fn = mName.toCharArray();
-            fn[2] = Character.toLowerCase(fn[2]);
-            fieldName = new String(fn, 2, fn.length - 2);
-        } else {
-            fieldName = mName;
-        }
-        return fieldName;
     }
 }
