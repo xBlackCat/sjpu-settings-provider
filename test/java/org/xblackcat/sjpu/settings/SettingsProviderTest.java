@@ -37,6 +37,12 @@ public class SettingsProviderTest {
             Assert.assertEquals(1, testSettings.getSimpleName());
             Assert.assertEquals(42, testSettings.getComplexNameWithABBR());
         }
+        {
+            TestSettingsPrefix testSettings = SettingsProvider.get(TestSettingsPrefix.class);
+
+            Assert.assertEquals(1, testSettings.getSimpleName());
+            Assert.assertEquals(42, testSettings.getComplexNameWithABBR());
+        }
 
         // Default value is not set for primitive field
         try {
@@ -51,7 +57,7 @@ public class SettingsProviderTest {
             Assert.fail("Exception is expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());
-            Assert.assertTrue( true);
+            Assert.assertTrue(true);
         }
     }
 }
