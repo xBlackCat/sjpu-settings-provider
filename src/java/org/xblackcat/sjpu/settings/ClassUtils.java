@@ -61,7 +61,7 @@ public class ClassUtils {
             propertyNameBuilder.append('.');
         }
 
-        final SettingsField field = m.getAnnotation(SettingsField.class);
+        final PropertyName field = m.getAnnotation(PropertyName.class);
         if (field != null && StringUtils.isNotBlank(field.value())) {
             propertyNameBuilder.append(field.value());
         } else {

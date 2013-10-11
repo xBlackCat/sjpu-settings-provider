@@ -7,9 +7,9 @@ package org.xblackcat.sjpu.settings;
  */
 @SettingsSource("/source/settings")
 public interface TestSettings {
-    @SettingsField(required = false)
+    @Optional
     int getSimpleName();
 
-    @SettingsField(defaultValue = "0")
+    @DefaultValue("0")
     int getComplexNameWithABBR();
 }

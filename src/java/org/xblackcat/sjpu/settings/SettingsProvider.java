@@ -100,7 +100,7 @@ public final class SettingsProvider {
 
         final String prefixName;
         final ClassPool pool = ClassPool.getDefault();
-        final SettingsPrefix prefixAnn = clazz.getAnnotation(SettingsPrefix.class);
+        final Prefix prefixAnn = clazz.getAnnotation(Prefix.class);
         if (prefixAnn != null) {
             prefixName = prefixAnn.value();
 
@@ -139,7 +139,7 @@ public final class SettingsProvider {
         List<Object> values = new ArrayList<>();
 
         for (Method m : clazz.getMethods()) {
-            final SettingsGroupField groupField = m.getAnnotation(SettingsGroupField.class);
+            final GroupField groupField = m.getAnnotation(GroupField.class);
 
             final Object value;
             if (groupField != null) {
@@ -149,7 +149,7 @@ public final class SettingsProvider {
                         properties,
                         prefixName,
                         m,
-                        m.getAnnotation(SettingsField.class).required()
+                        m.getAnnotation(Optional.class) == null
                 );
             } else {
                 final Class<?> returnType = m.getReturnType();
@@ -398,22 +398,27 @@ public final class SettingsProvider {
 
         if (valueStr == null) {
             // Check for default value
-            final SettingsField field = m.getAnnotation(SettingsField.class);
-            if (field == null) {
-                // Default value is not defined
-                throw new SettingsException("Property " + propertyName + " is not set for method " + m.getName());
-            }
+            final boolean required = m.getAnnotation(Optional.class) == null;
 
-            final String defValue = field.defaultValue();
-            if ("".equals(defValue) && field.required()) {
-                throw new SettingsException("Property " + propertyName + " is not set for method " + m.getName());
-            }
+            if (required) {
+                final DefaultValue field = m.getAnnotation(DefaultValue.class);
 
-            if (log.isTraceEnabled()) {
-                log.trace("Using default value " + defValue + " for property " + propertyName);
-            }
+                if (field == null) {
+                    // Default value is not defined
+                    throw new SettingsException("Property " + propertyName + " is not set for method " + m.getName());
+                }
 
-            valueStr = defValue;
+                final String defValue = field.value();
+                if ("".equals(defValue)) {
+                    throw new SettingsException("Property " + propertyName + " is not set for method " + m.getName());
+                }
+
+                if (log.isTraceEnabled()) {
+                    log.trace("Using default value " + defValue + " for property " + propertyName);
+                }
+
+                valueStr = defValue;
+            }
         }
 
         if (returnType.isPrimitive() && (valueStr == null || valueStr.length() == 0)) {

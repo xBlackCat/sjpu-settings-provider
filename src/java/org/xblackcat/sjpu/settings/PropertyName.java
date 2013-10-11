@@ -6,8 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Additional information for mapping value from .property file to field. If field is not annotated with the annotation the default values
- * will be used to generate mapping. See the annotation fields description for details.
+ * Additional information for mapping value from .property file to field: custom property name
  * <p/>
  * 12.02.13 11:24
  *
@@ -15,9 +14,9 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
-public @interface SettingsField {
+public @interface PropertyName {
     /**
-     * Defines a property name to be mapped to the method. If a prefix defined with {@linkplain org.xblackcat.sjpu.settings.SettingsPrefix}
+     * Defines a property name to be mapped to the method. If a prefix defined with {@linkplain org.xblackcat.sjpu.settings.Prefix}
      * annotation it will be added at the beginning of the property name. By default property name will be generated from
      * annotated method name as follow:
      * <ul>
@@ -27,15 +26,5 @@ public @interface SettingsField {
      * <li><code>getMyPropertyValue() -&gt; my.property.value</code></li>
      * </ul>
      */
-    String value() default "";
-
-    /**
-     * Default value for the field in string representation. "" means no default value.
-     */
-    String defaultValue() default "";
-
-    /**
-     * Non-required fields initializes with null value if correspond property is not found.
-     */
-    boolean required() default true;
+    String value();
 }
