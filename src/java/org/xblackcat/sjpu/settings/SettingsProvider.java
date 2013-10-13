@@ -6,12 +6,12 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.URI;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -24,9 +24,53 @@ public final class SettingsProvider {
     private static final Log log = LogFactory.getLog(SettingsProvider.class);
 
     /**
+     * Loads settings for specified interface from specified file.
+     *
+     * @param clazz target interface class for holding settings.
+     * @param file  source input file (properties file)
+     * @param <T>   target interface for holding settings.
+     * @return initialized implementation of the specified interface class.
+     * @throws SettingsException if interface methods are not annotated or settings can't be read.
+     */
+    public static <T> T get(Class<T> clazz, File file) throws SettingsException, IOException {
+        try (InputStream is = new BufferedInputStream(new FileInputStream(file))) {
+            return loadDefaults(clazz, is);
+        }
+    }
+
+    /**
+     * Loads settings for specified interface from specified resource specified by URI.
+     *
+     * @param clazz target interface class for holding settings.
+     * @param uri   Uri to .properties file
+     * @param <T>   target interface for holding settings.
+     * @return initialized implementation of the specified interface class.
+     * @throws org.xblackcat.sjpu.settings.SettingsException if interface methods are not annotated or settings can't be read.
+     */
+    public static <T> T get(Class<T> clazz, URI uri) throws SettingsException, IOException {
+        return get(clazz, uri.toURL());
+    }
+
+    /**
+     * Loads settings for specified interface from specified resource specified by URL.
+     *
+     * @param clazz target interface class for holding settings.
+     * @param url   Url to .properties file
+     * @param <T>   target interface for holding settings.
+     * @return initialized implementation of the specified interface class.
+     * @throws SettingsException if interface methods are not annotated or settings can't be read.
+     */
+    public static <T> T get(Class<T> clazz, URL url) throws SettingsException, IOException {
+        try (InputStream is = new BufferedInputStream(url.openStream())) {
+            return loadDefaults(clazz, is);
+        }
+    }
+
+    /**
      * Loads settings for specified interface from specified InputStream. Input stream remains open after reading.
      *
      * @param clazz target interface class for holding settings.
+     * @param is    source input stream (properties file)
      * @param <T>   target interface for holding settings.
      * @return initialized implementation of the specified interface class.
      * @throws SettingsException if interface methods are not annotated or settings can't be read.

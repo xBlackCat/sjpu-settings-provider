@@ -5,6 +5,8 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.net.URISyntaxException;
+import java.net.URL;
 
 /**
  * 10.01.13 11:37
@@ -21,7 +23,7 @@ public class SettingsProviderTest {
     }
 
     @Test
-    public void loadSettings() throws SettingsException, IOException {
+    public void loadSettings() throws SettingsException, IOException, URISyntaxException {
         {
             TestSettings testSettings = SettingsProvider.get(TestSettings.class);
 
@@ -32,6 +34,16 @@ public class SettingsProviderTest {
             TestSettingsBlank testSettings = SettingsProvider.get(
                     TestSettingsBlank.class,
                     ClassUtils.getInputStream("/source/settings.properties")
+            );
+
+            Assert.assertEquals(1, testSettings.getSimpleName());
+            Assert.assertEquals(42, testSettings.getComplexNameWithABBR());
+        }
+                {
+            final URL resource = getClass().getResource("/source/settings.properties");
+            TestSettingsBlank testSettings = SettingsProvider.get(
+                    TestSettingsBlank.class,
+                    resource.toURI()
             );
 
             Assert.assertEquals(1, testSettings.getSimpleName());
