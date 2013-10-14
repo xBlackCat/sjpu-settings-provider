@@ -3,11 +3,7 @@ package org.xblackcat.sjpu.settings;
 import javassist.CtClass;
 import org.apache.commons.lang3.StringUtils;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.Method;
-import java.net.URL;
-import java.util.MissingResourceException;
 
 /**
  * 12.02.13 16:40
@@ -83,23 +79,5 @@ public class ClassUtils {
         }
 
         return propertyNameBuilder.toString();
-    }
-
-    public static InputStream getInputStream(String propertiesFile) throws IOException {
-        URL result;
-        URL url = SettingsProvider.class.getResource(propertiesFile);
-        if (url == null) {
-            url = SettingsProvider.class.getClassLoader().getResource(propertiesFile);
-        }
-        if (url == null) {
-            throw new MissingResourceException(
-                    "Can not find resource " + propertiesFile,
-                    SettingsProvider.class.getName(),
-                    propertiesFile
-            );
-        } else {
-            result = url;
-        }
-        return result.openStream();
     }
 }

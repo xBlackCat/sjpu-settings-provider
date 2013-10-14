@@ -4,6 +4,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -33,13 +34,13 @@ public class SettingsProviderTest {
         {
             TestSettingsBlank testSettings = SettingsProvider.get(
                     TestSettingsBlank.class,
-                    ClassUtils.getInputStream("/source/settings.properties")
+                    SettingsProvider.getInputStream("/source/settings.properties")
             );
 
             Assert.assertEquals(1, testSettings.getSimpleName());
             Assert.assertEquals(42, testSettings.getComplexNameWithABBR());
         }
-                {
+        {
             final URL resource = getClass().getResource("/source/settings.properties");
             TestSettingsBlank testSettings = SettingsProvider.get(
                     TestSettingsBlank.class,
@@ -58,18 +59,32 @@ public class SettingsProviderTest {
 
         // Default value is not set for primitive field
         try {
-            SettingsProvider.get(TestSettings.class, ClassUtils.getInputStream("/source/settings-blank.properties"));
+            SettingsProvider.get(TestSettings.class, SettingsProvider.getInputStream("/source/settings-blank.properties"));
             Assert.fail("Exception is expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());
             Assert.assertTrue(true);
         }
         try {
-            SettingsProvider.get(TestSettingsBlank.class, ClassUtils.getInputStream("/source/settings-blank.properties"));
+            SettingsProvider.get(TestSettingsBlank.class, SettingsProvider.getInputStream("/source/settings-blank.properties"));
             Assert.fail("Exception is expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());
             Assert.assertTrue(true);
         }
+    }
+
+    @Test
+    public void complexSettings() throws SettingsException, IOException {
+        final ComplexSettings settings;
+        try (InputStream is = getClass().getResourceAsStream("/source/complex-settings.properties")) {
+            settings = SettingsProvider.get(ComplexSettings.class, is);
+        }
+
+        Assert.assertEquals(1, settings.getSimpleName());
+        Assert.assertEquals(42, settings.getComplexNameWithABBR());
+        Assert.assertEquals("Test", settings.getValue());
+        Assert.assertEquals("Another", settings.getAnotherValue());
+
     }
 }
