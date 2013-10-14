@@ -506,7 +506,7 @@ public final class SettingsProvider {
         return value;
     }
 
-    private static InputStream getInputStream(String propertiesFile) throws IOException {
+    static InputStream getInputStream(String propertiesFile) throws IOException {
         InputStream is = SettingsProvider.class.getResourceAsStream(propertiesFile);
         if (is == null) {
             is = SettingsProvider.class.getClassLoader().getResourceAsStream(propertiesFile);
