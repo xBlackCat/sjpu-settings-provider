@@ -800,6 +800,7 @@ public final class SettingsProvider {
             this.targetType = targetType;
         }
 
+        @SuppressWarnings({"unchecked"})
         public Object parse(String valueStr) {
             return ClassUtils.searchForEnum(targetType, valueStr);
         }
@@ -816,6 +817,7 @@ public final class SettingsProvider {
             this.targetType = targetType;
         }
 
+        @SuppressWarnings({"unchecked"})
         public void set(Object o, int i, String valueStr) {
             Array.set(o, i, ClassUtils.searchForEnum(targetType, valueStr));
         }

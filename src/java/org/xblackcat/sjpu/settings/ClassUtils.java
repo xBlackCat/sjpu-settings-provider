@@ -17,7 +17,7 @@ public class ClassUtils {
         try {
             return Enum.valueOf(clazz, name);
         } catch (IllegalArgumentException e) {
-            // Try to search case-insensetive
+            // Try to search case-insensitive
             for (T c : clazz.getEnumConstants()) {
                 if (name.equalsIgnoreCase(c.name())) {
                     return c;
@@ -35,19 +35,19 @@ public class ClassUtils {
      * @return field name related to the getter.
      */
     public static String makeFieldName(String mName) {
-        final String fieldName;
         if (mName.startsWith("get") && mName.length() > 3) {
             final char[] fn = mName.toCharArray();
             fn[3] = Character.toLowerCase(fn[3]);
-            fieldName = new String(fn, 3, fn.length - 3);
-        } else if (mName.startsWith("is") && mName.length() > 2) {
+            return new String(fn, 3, fn.length - 3);
+        }
+
+        if (mName.startsWith("is") && mName.length() > 2) {
             final char[] fn = mName.toCharArray();
             fn[2] = Character.toLowerCase(fn[2]);
-            fieldName = new String(fn, 2, fn.length - 2);
-        } else {
-            fieldName = mName;
+            return new String(fn, 2, fn.length - 2);
         }
-        return fieldName;
+
+        return mName;
     }
 
     public static String buildPropertyName(String prefixName, Method m) {
