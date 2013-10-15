@@ -6,7 +6,7 @@ package org.xblackcat.sjpu.settings;
  * @author xBlackCat
  */
 @SettingsSource("/source/settings")
-public interface TestSettings {
+public interface Settings {
     @Optional
     int getSimpleName();
 

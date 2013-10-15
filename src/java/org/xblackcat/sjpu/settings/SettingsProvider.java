@@ -7,6 +7,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import java.io.*;
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -217,14 +218,143 @@ public final class SettingsProvider {
                     @SuppressWarnings("unchecked") final Constructor<?> c = getSettingsConstructor(returnType, pool);
 
                     value = initialize(c, buildConstructorParameters(pool, returnType, properties, propertyName));
+                } else if (returnType.isArray()) {
+                    value = getArrayFieldValue(properties, prefixName, method, ",");
                 } else {
-                    value = getSimpleFieldValue(properties, prefixName, method);
+                    String valueStr = getStringValue(properties, prefixName, method);
+
+                    value = convertToObject(method.getReturnType(), valueStr);
                 }
             }
 
             values.add(value);
         }
         return values;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Object getArrayFieldValue(
+            Properties properties,
+            String prefixName,
+            Method method,
+            String splitter
+    ) throws SettingsException {
+        final Class<?> returnType = method.getReturnType();
+        String arrayString = getStringValue(properties, prefixName, method);
+
+        String[] values = StringUtils.splitByWholeSeparator(arrayString, splitter);
+        Class<?> targetType = returnType.getComponentType();
+        if (targetType == null) {
+            throw new IllegalStateException("Array component type is null? " + returnType.getName());
+        }
+
+        Object o = Array.newInstance(targetType, values.length);
+        ArraySetter setter = getArraySetter(targetType);
+
+        int i = 0;
+        while (i < values.length) {
+            String valueStr = values[i];
+            try {
+                if (valueStr == null) {
+                    Array.set(o, i, null);
+                } else {
+                    setter.set(o, i, valueStr);
+                }
+            } catch (RuntimeException e) {
+                throw new SettingsException("Can't parse value " + valueStr + " to type " + targetType.getName(), e);
+            }
+
+            i++;
+        }
+
+        return o;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static ArraySetter getArraySetter(Class<?> targetType) throws SettingsException {
+        if (String.class == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.set(o, i, valueStr);
+                }
+            };
+        } else if (Integer.class == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.set(o, i, Integer.parseInt(valueStr));
+                }
+            };
+        } else if (Integer.TYPE == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.setInt(o, i, Integer.parseInt(valueStr));
+                }
+            };
+        } else if (Long.class == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.set(o, i, Long.parseLong(valueStr));
+                }
+            };
+        } else if (Long.TYPE == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.setLong(o, i, Long.parseLong(valueStr));
+                }
+            };
+        } else if (Short.class == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.set(o, i, Short.parseShort(valueStr));
+                }
+            };
+        } else if (Short.TYPE == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.setShort(o, i, Short.parseShort(valueStr));
+                }
+            };
+        } else if (Byte.class == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.set(o, i, Byte.parseByte(valueStr));
+                }
+            };
+        } else if (Byte.TYPE == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.setByte(o, i, Byte.parseByte(valueStr));
+                }
+            };
+        } else if (Boolean.class == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.set(o, i, BooleanUtils.toBoolean(valueStr));
+                }
+            };
+        } else if (Boolean.TYPE == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.setBoolean(o, i, BooleanUtils.toBoolean(valueStr));
+                }
+            };
+        } else if (Character.class == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.set(o, i, valueStr.toCharArray()[0]);
+                }
+            };
+        } else if (Character.TYPE == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.setChar(o, i, valueStr.toCharArray()[0]);
+                }
+            };
+        } else if (Enum.class.isAssignableFrom(targetType)) {
+            return new EnumArraySetter((Class<Enum>) targetType);
+        } else {
+            throw new SettingsException("Unknown type to parse: " + targetType.getName());
+        }
     }
 
     private static <T> Constructor<T> getSettingsConstructor(Class<T> clazz, ClassPool pool) throws SettingsException {
@@ -434,8 +564,7 @@ public final class SettingsProvider {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private static Object getSimpleFieldValue(Properties properties, String prefixName, Method m) throws SettingsException {
+    private static String getStringValue(Properties properties, String prefixName, Method m) throws SettingsException {
         final Class<?> returnType = m.getReturnType();
 
         final String propertyName = ClassUtils.buildPropertyName(prefixName, m);
@@ -476,32 +605,35 @@ public final class SettingsProvider {
                             m.getName()
             );
         }
+        return valueStr;
+    }
 
+    private static Object convertToObject(Class<?> targetType, String valueStr) throws SettingsException {
         final Object value;
         try {
             if (valueStr == null) {
                 value = null;
-            } else if (String.class == returnType) {
+            } else if (String.class == targetType) {
                 value = valueStr;
-            } else if (Integer.class == returnType || Integer.TYPE == returnType) {
+            } else if (Integer.class == targetType || Integer.TYPE == targetType) {
                 value = Integer.parseInt(valueStr);
-            } else if (Long.class == returnType || Long.TYPE == returnType) {
+            } else if (Long.class == targetType || Long.TYPE == targetType) {
                 value = Long.parseLong(valueStr);
-            } else if (Short.class == returnType || Short.TYPE == returnType) {
+            } else if (Short.class == targetType || Short.TYPE == targetType) {
                 value = Short.parseShort(valueStr);
-            } else if (Byte.class == returnType || Byte.TYPE == returnType) {
+            } else if (Byte.class == targetType || Byte.TYPE == targetType) {
                 value = Byte.parseByte(valueStr);
-            } else if (Boolean.class == returnType || Boolean.TYPE == returnType) {
+            } else if (Boolean.class == targetType || Boolean.TYPE == targetType) {
                 value = BooleanUtils.toBoolean(valueStr);
-            } else if (Character.class == returnType || Character.TYPE == returnType) {
+            } else if (Character.class == targetType || Character.TYPE == targetType) {
                 value = valueStr.toCharArray()[0];
-            } else if (Enum.class.isAssignableFrom(returnType)) {
-                value = ClassUtils.searchForEnum((Class<Enum>) returnType, valueStr);
+            } else if (Enum.class.isAssignableFrom(targetType)) {
+                value = ClassUtils.searchForEnum((Class<Enum>) targetType, valueStr);
             } else {
-                throw new SettingsException("Unknown type to parse: " + returnType.getName());
+                throw new SettingsException("Unknown type to parse: " + targetType.getName());
             }
         } catch (RuntimeException e) {
-            throw new SettingsException("Can't parse value " + valueStr + " to type " + returnType.getName());
+            throw new SettingsException("Can't parse value " + valueStr + " to type " + targetType.getName(), e);
         }
         return value;
     }
@@ -513,5 +645,21 @@ public final class SettingsProvider {
         }
 
         return is;
+    }
+
+    private static interface ArraySetter {
+        void set(Object array, int index, String value);
+    }
+
+    private static class EnumArraySetter implements ArraySetter {
+        private final Class<Enum> targetType;
+
+        private EnumArraySetter(Class<Enum> targetType) {
+            this.targetType = targetType;
+        }
+
+        public void set(Object o, int i, String valueStr) {
+            Array.set(o, i, ClassUtils.searchForEnum(targetType, valueStr));
+        }
     }
 }

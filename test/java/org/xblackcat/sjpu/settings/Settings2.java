@@ -5,7 +5,7 @@ package org.xblackcat.sjpu.settings;
  *
  * @author xBlackCat
  */
-public interface TestSettings2 {
+public interface Settings2 {
     String getValue();
 
     @PropertyName("value2")

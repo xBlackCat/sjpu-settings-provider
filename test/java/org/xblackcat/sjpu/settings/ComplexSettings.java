@@ -1,9 +1,15 @@
 package org.xblackcat.sjpu.settings;
 
 /**
- * 14.10.13 16:56
+ * 15.10.13 16:28
  *
  * @author xBlackCat
  */
-public interface ComplexSettings extends TestSettings, TestSettings2 {
+@SettingsSource("/source/complex.properties")
+public interface ComplexSettings {
+    int[] getIds();
+
+    boolean[] getFlags();
+
+    Numbers[] getValues();
 }

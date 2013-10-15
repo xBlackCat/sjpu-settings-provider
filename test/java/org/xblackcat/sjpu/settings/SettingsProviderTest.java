@@ -17,7 +17,7 @@ import java.net.URL;
 public class SettingsProviderTest {
     @Test
     public void generatePropertyNames() {
-        final Method[] methods = TestSettings.class.getMethods();
+        final Method[] methods = Settings.class.getMethods();
         Assert.assertEquals("simple.name", ClassUtils.buildPropertyName(null, methods[0]));
         Assert.assertEquals("complex.name.with.abbr", ClassUtils.buildPropertyName(null, methods[1]));
 
@@ -26,14 +26,14 @@ public class SettingsProviderTest {
     @Test
     public void loadSettings() throws SettingsException, IOException, URISyntaxException {
         {
-            TestSettings testSettings = SettingsProvider.get(TestSettings.class);
+            Settings settings = SettingsProvider.get(Settings.class);
 
-            Assert.assertEquals(1, testSettings.getSimpleName());
-            Assert.assertEquals(42, testSettings.getComplexNameWithABBR());
+            Assert.assertEquals(1, settings.getSimpleName());
+            Assert.assertEquals(42, settings.getComplexNameWithABBR());
         }
         {
-            TestSettingsBlank testSettings = SettingsProvider.get(
-                    TestSettingsBlank.class,
+            SettingsBlank testSettings = SettingsProvider.get(
+                    SettingsBlank.class,
                     SettingsProvider.getInputStream("/source/settings.properties")
             );
 
@@ -42,8 +42,8 @@ public class SettingsProviderTest {
         }
         {
             final URL resource = getClass().getResource("/source/settings.properties");
-            TestSettingsBlank testSettings = SettingsProvider.get(
-                    TestSettingsBlank.class,
+            SettingsBlank testSettings = SettingsProvider.get(
+                    SettingsBlank.class,
                     resource.toURI()
             );
 
@@ -51,7 +51,7 @@ public class SettingsProviderTest {
             Assert.assertEquals(42, testSettings.getComplexNameWithABBR());
         }
         {
-            TestSettingsPrefix testSettings = SettingsProvider.get(TestSettingsPrefix.class);
+            SettingsPrefix testSettings = SettingsProvider.get(SettingsPrefix.class);
 
             Assert.assertEquals(1, testSettings.getSimpleName());
             Assert.assertEquals(42, testSettings.getComplexNameWithABBR());
@@ -59,14 +59,14 @@ public class SettingsProviderTest {
 
         // Default value is not set for primitive field
         try {
-            SettingsProvider.get(TestSettings.class, SettingsProvider.getInputStream("/source/settings-blank.properties"));
+            SettingsProvider.get(Settings.class, SettingsProvider.getInputStream("/source/settings-blank.properties"));
             Assert.fail("Exception is expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());
             Assert.assertTrue(true);
         }
         try {
-            SettingsProvider.get(TestSettingsBlank.class, SettingsProvider.getInputStream("/source/settings-blank.properties"));
+            SettingsProvider.get(SettingsBlank.class, SettingsProvider.getInputStream("/source/settings-blank.properties"));
             Assert.fail("Exception is expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());
@@ -75,16 +75,23 @@ public class SettingsProviderTest {
     }
 
     @Test
-    public void complexSettings() throws SettingsException, IOException {
-        final ComplexSettings settings;
-        try (InputStream is = getClass().getResourceAsStream("/source/complex-settings.properties")) {
-            settings = SettingsProvider.get(ComplexSettings.class, is);
+    public void combinedSettings() throws SettingsException, IOException {
+        final CombinedSettings settings;
+        try (InputStream is = getClass().getResourceAsStream("/source/combined-settings.properties")) {
+            settings = SettingsProvider.get(CombinedSettings.class, is);
         }
 
         Assert.assertEquals(1, settings.getSimpleName());
         Assert.assertEquals(42, settings.getComplexNameWithABBR());
         Assert.assertEquals("Test", settings.getValue());
         Assert.assertEquals("Another", settings.getAnotherValue());
+    }
 
+    @Test
+    public void complexSettings() throws SettingsException, IOException {
+        ComplexSettings settings = SettingsProvider.get(ComplexSettings.class);
+
+        Assert.assertArrayEquals(new int[]{1, 10, 20, 50, 500, 1000}, settings.getIds());
+        Assert.assertArrayEquals(new Numbers[]{Numbers.One, Numbers.Three, Numbers.Seven}, settings.getValues());
     }
 }

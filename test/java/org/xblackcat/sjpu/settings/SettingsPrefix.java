@@ -5,7 +5,9 @@ package org.xblackcat.sjpu.settings;
  *
  * @author xBlackCat
  */
-public interface TestSettingsBlank {
+@Prefix("super")
+@SettingsSource("/source/settings-prefix.properties")
+public interface SettingsPrefix {
     int getSimpleName();
 
     int getComplexNameWithABBR();
