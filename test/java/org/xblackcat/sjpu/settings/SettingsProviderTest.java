@@ -33,10 +33,7 @@ public class SettingsProviderTest {
             Assert.assertEquals(42, settings.getComplexNameWithABBR());
         }
         {
-            SettingsBlank testSettings = SettingsProvider.get(
-                    SettingsBlank.class,
-                    SettingsProvider.getInputStream("/source/settings.properties")
-            );
+            SettingsBlank testSettings = SettingsProvider.get(SettingsBlank.class, "/source/settings.properties");
 
             Assert.assertEquals(1, testSettings.getSimpleName());
             Assert.assertEquals(42, testSettings.getComplexNameWithABBR());
@@ -60,14 +57,14 @@ public class SettingsProviderTest {
 
         // Default value is not set for primitive field
         try {
-            SettingsProvider.get(Settings.class, SettingsProvider.getInputStream("/source/settings-blank.properties"));
+            SettingsProvider.get(Settings.class, "/source/settings-blank.properties");
             Assert.fail("Exception is expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());
             Assert.assertTrue(true);
         }
         try {
-            SettingsProvider.get(SettingsBlank.class, SettingsProvider.getInputStream("/source/settings-blank.properties"));
+            SettingsProvider.get(SettingsBlank.class, "/source/settings-blank.properties");
             Assert.fail("Exception is expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());

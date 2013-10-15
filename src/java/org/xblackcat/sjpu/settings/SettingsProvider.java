@@ -23,7 +23,7 @@ import java.util.*;
  */
 public final class SettingsProvider {
     private static final Log log = LogFactory.getLog(SettingsProvider.class);
-    private static final String DEFAULT_SEPARATOR = ",";
+    private static final String DEFAULT_DELIMITER = ",";
 
     /**
      * Loads settings for specified interface from specified file.
@@ -206,20 +206,20 @@ public final class SettingsProvider {
                 value = getGroupFieldValue(pool, groupField.value(), properties, prefixName, method);
             } else {
                 final Class<?> returnType = method.getReturnType();
-                final String separator;
-                Separator separatorAnn = method.getAnnotation(Separator.class);
-                if (separatorAnn == null) {
-                    separator = DEFAULT_SEPARATOR;
+                final String delimiter;
+                Delimiter delimiterAnn = method.getAnnotation(Delimiter.class);
+                if (delimiterAnn == null) {
+                    delimiter = DEFAULT_DELIMITER;
                 } else {
-                    separator = separatorAnn.value();
+                    delimiter = delimiterAnn.value();
                 }
 
                 if (returnType.isArray()) {
-                    value = getArrayFieldValue(properties, prefixName, method, separator);
+                    value = getArrayFieldValue(properties, prefixName, method, delimiter);
                 } else if (Collection.class.isAssignableFrom(returnType)) {
-                    value = getCollectionFieldValue(properties, prefixName, method, separator);
+                    value = getCollectionFieldValue(properties, prefixName, method, delimiter);
                 } else if (Map.class.isAssignableFrom(returnType)) {
-                    value = getMapFieldValue(properties, prefixName, method, separator);
+                    value = getMapFieldValue(properties, prefixName, method, delimiter);
                 } else if (returnType.isInterface()) {
                     final String propertyName = ClassUtils.buildPropertyName(prefixName, method);
 
@@ -236,246 +236,6 @@ public final class SettingsProvider {
             values.add(value);
         }
         return values;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Object getArrayFieldValue(
-            Properties properties,
-            String prefixName,
-            Method method,
-            String splitter
-    ) throws SettingsException {
-        final Class<?> returnType = method.getReturnType();
-        String arrayString = getStringValue(properties, prefixName, method);
-
-        String[] values = StringUtils.splitByWholeSeparator(arrayString, splitter);
-        Class<?> targetType = returnType.getComponentType();
-        if (targetType == null) {
-            throw new IllegalStateException("Array component type is null? " + returnType.getName());
-        }
-
-        Object o = Array.newInstance(targetType, values.length);
-        ArraySetter setter = getArraySetter(targetType);
-
-        int i = 0;
-        while (i < values.length) {
-            String valueStr = values[i];
-            try {
-                if (valueStr == null) {
-                    Array.set(o, i, null);
-                } else {
-                    setter.set(o, i, valueStr);
-                }
-            } catch (RuntimeException e) {
-                throw new SettingsException("Can't parse value " + valueStr + " to type " + targetType.getName(), e);
-            }
-
-            i++;
-        }
-
-        return o;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Object getCollectionFieldValue(
-            Properties properties,
-            String prefixName,
-            Method method,
-            String splitter
-    ) throws SettingsException {
-        String arrayString = getStringValue(properties, prefixName, method);
-        Class<?> returnType = method.getReturnType();
-
-        String[] values = StringUtils.splitByWholeSeparator(arrayString, splitter);
-
-        final Class<?> targetType;
-        final Collection collection;
-        ListOf listOf = method.getAnnotation(ListOf.class);
-        SetOf setOf = method.getAnnotation(SetOf.class);
-        if (listOf != null) {
-            if (returnType != List.class) {
-                throw new SettingsException("Annotation @ListOf allowed only for java.util.List return type.");
-            }
-            targetType = listOf.value();
-            collection = new ArrayList<>(values.length);
-        } else if (setOf != null) {
-            if (returnType != Set.class) {
-                throw new SettingsException("Annotation @SetOf allowed only for java.util.Set return type.");
-            }
-            targetType = setOf.value();
-
-            if (Enum.class.isAssignableFrom(targetType)) {
-                collection = new LinkedHashSet<>(values.length);
-            } else {
-                collection = EnumSet.noneOf((Class<Enum>) targetType);
-            }
-        } else {
-            throw new SettingsException("Neither @ListOf nor @SetOf annotations is set for declaring class of collection element.");
-        }
-
-        ValueParser parser = getToObjectConverter(targetType);
-
-        for (String valueStr : values) {
-            try {
-                if (valueStr == null) {
-                    collection.add(null);
-                } else {
-                    collection.add(parser.parse(valueStr));
-                }
-            } catch (RuntimeException e) {
-                throw new SettingsException("Can't parse value " + valueStr + " to type " + targetType.getName(), e);
-            }
-        }
-
-        if (listOf != null) {
-            return Collections.unmodifiableList((List<?>) collection);
-        } else {
-            return Collections.unmodifiableSet((Set<?>) collection);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Map getMapFieldValue(
-            Properties properties,
-            String prefixName,
-            Method method,
-            String splitter
-    ) throws SettingsException {
-        String arrayString = getStringValue(properties, prefixName, method);
-
-        String[] values = StringUtils.splitByWholeSeparator(arrayString, splitter);
-
-        final Class<?> targetKeyType;
-        final Map map;
-        MapOf mapOf = method.getAnnotation(MapOf.class);
-        if (mapOf != null) {
-            targetKeyType = mapOf.key();
-
-            if (Enum.class.isAssignableFrom(targetKeyType)) {
-                map = new EnumMap(targetKeyType);
-            } else {
-                map = new LinkedHashMap(values.length);
-            }
-        } else {
-            throw new SettingsException("@MapOf annotation is not set for declaring target map elements.");
-        }
-
-        ValueParser keyParser = getToObjectConverter(targetKeyType);
-        ValueParser valueParser = getToObjectConverter(mapOf.value());
-
-        for (String part : values) {
-            String[] parts = StringUtils.splitByWholeSeparator(part, mapOf.splitter(), 2);
-            final String keyString;
-            final String valueString;
-            if (parts.length < 2) {
-                keyString = parts[0];
-                valueString = null;
-            } else {
-                keyString = parts[0];
-                valueString = parts[1];
-            }
-
-            try {
-                Object key = keyParser.parse(keyString);
-
-                if (valueString == null) {
-                    map.put(key, null);
-                } else {
-                    map.put(key, valueParser.parse(valueString));
-                }
-            } catch (RuntimeException e) {
-                throw new SettingsException("Can't parse value " + valueString + " to type " + targetKeyType.getName(), e);
-            }
-        }
-
-        return Collections.unmodifiableMap(map);
-    }
-
-    @SuppressWarnings("unchecked")
-    private static ArraySetter getArraySetter(Class<?> targetType) throws SettingsException {
-        if (String.class == targetType) {
-            return new ArraySetter() {
-                public void set(Object o, int i, String valueStr) {
-                    Array.set(o, i, valueStr);
-                }
-            };
-        } else if (Integer.class == targetType) {
-            return new ArraySetter() {
-                public void set(Object o, int i, String valueStr) {
-                    Array.set(o, i, Integer.parseInt(valueStr));
-                }
-            };
-        } else if (Integer.TYPE == targetType) {
-            return new ArraySetter() {
-                public void set(Object o, int i, String valueStr) {
-                    Array.setInt(o, i, Integer.parseInt(valueStr));
-                }
-            };
-        } else if (Long.class == targetType) {
-            return new ArraySetter() {
-                public void set(Object o, int i, String valueStr) {
-                    Array.set(o, i, Long.parseLong(valueStr));
-                }
-            };
-        } else if (Long.TYPE == targetType) {
-            return new ArraySetter() {
-                public void set(Object o, int i, String valueStr) {
-                    Array.setLong(o, i, Long.parseLong(valueStr));
-                }
-            };
-        } else if (Short.class == targetType) {
-            return new ArraySetter() {
-                public void set(Object o, int i, String valueStr) {
-                    Array.set(o, i, Short.parseShort(valueStr));
-                }
-            };
-        } else if (Short.TYPE == targetType) {
-            return new ArraySetter() {
-                public void set(Object o, int i, String valueStr) {
-                    Array.setShort(o, i, Short.parseShort(valueStr));
-                }
-            };
-        } else if (Byte.class == targetType) {
-            return new ArraySetter() {
-                public void set(Object o, int i, String valueStr) {
-                    Array.set(o, i, Byte.parseByte(valueStr));
-                }
-            };
-        } else if (Byte.TYPE == targetType) {
-            return new ArraySetter() {
-                public void set(Object o, int i, String valueStr) {
-                    Array.setByte(o, i, Byte.parseByte(valueStr));
-                }
-            };
-        } else if (Boolean.class == targetType) {
-            return new ArraySetter() {
-                public void set(Object o, int i, String valueStr) {
-                    Array.set(o, i, BooleanUtils.toBoolean(valueStr));
-                }
-            };
-        } else if (Boolean.TYPE == targetType) {
-            return new ArraySetter() {
-                public void set(Object o, int i, String valueStr) {
-                    Array.setBoolean(o, i, BooleanUtils.toBoolean(valueStr));
-                }
-            };
-        } else if (Character.class == targetType) {
-            return new ArraySetter() {
-                public void set(Object o, int i, String valueStr) {
-                    Array.set(o, i, valueStr.toCharArray()[0]);
-                }
-            };
-        } else if (Character.TYPE == targetType) {
-            return new ArraySetter() {
-                public void set(Object o, int i, String valueStr) {
-                    Array.setChar(o, i, valueStr.toCharArray()[0]);
-                }
-            };
-        } else if (Enum.class.isAssignableFrom(targetType)) {
-            return new EnumArraySetter((Class<Enum>) targetType);
-        } else {
-            throw new SettingsException("Unknown type to parse: " + targetType.getName());
-        }
     }
 
     private static <T> Constructor<T> getSettingsConstructor(Class<T> clazz, ClassPool pool) throws SettingsException {
@@ -497,72 +257,6 @@ public final class SettingsProvider {
         @SuppressWarnings({"unchecked", "UnnecessaryLocalVariable"})
         final Constructor<T> constructor = (Constructor<T>) aClass.getConstructors()[0];
         return constructor;
-    }
-
-    private static <T> Map<String, T> getGroupFieldValue(
-            ClassPool pool,
-            Class<T> clazz,
-            Properties properties,
-            String prefixName,
-            Method method
-    ) throws SettingsException {
-        final Class<?> returnType = method.getReturnType();
-        if (Map.class != returnType) {
-            throw new SettingsException("Group field should have Map return type");
-        }
-        @SuppressWarnings("unchecked") final Constructor<T> c = getSettingsConstructor(clazz, pool);
-
-        final String propertyName = ClassUtils.buildPropertyName(prefixName, method);
-        final String propertyNameDot = propertyName + ".";
-
-        Set<String> propertyNames = new HashSet<>();
-
-        for (String name : properties.stringPropertyNames()) {
-            if (name.startsWith(propertyNameDot)) {
-                propertyNames.add(name);
-            }
-        }
-
-        // Search for possible prefixes
-        Set<String> prefixes = new HashSet<>();
-        for (Method mm : clazz.getMethods()) {
-            final String suffix = "." + ClassUtils.buildPropertyName(null, mm);
-
-            for (String name : propertyNames) {
-                if (name.endsWith(suffix)) {
-                    final String prefix;
-                    final int prefixLen = propertyNameDot.length();
-                    final int cutLen = name.length() - suffix.length();
-                    if (prefixLen >= cutLen) {
-                        prefix = "";
-                    } else {
-                        prefix = name.substring(prefixLen, cutLen);
-                    }
-
-                    prefixes.add(prefix);
-                }
-            }
-        }
-
-        boolean required = method.getAnnotation(Optional.class) == null;
-        if (required && !prefixes.contains("")) {
-            throw new SettingsException("A default group set is required for method " + method.getName());
-        }
-
-        Map<String, T> result = new HashMap<>();
-
-        for (String p : prefixes) {
-            final String realPrefix;
-            if (StringUtils.isNotBlank(p)) {
-                realPrefix = propertyNameDot + p;
-            } else {
-                realPrefix = propertyName;
-            }
-
-            result.put(p, initialize(c, buildConstructorParameters(pool, clazz, properties, realPrefix)));
-        }
-
-        return Collections.unmodifiableMap(result);
     }
 
     private static <T> CtClass buildSettingsClass(Class<T> clazz, ClassPool pool) throws SettingsException {
@@ -729,6 +423,321 @@ public final class SettingsProvider {
         return valueStr;
     }
 
+    @SuppressWarnings("unchecked")
+    private static Object getArrayFieldValue(
+            Properties properties,
+            String prefixName,
+            Method method,
+            String delimiter
+    ) throws SettingsException {
+        final Class<?> returnType = method.getReturnType();
+        String arrayString = getStringValue(properties, prefixName, method);
+
+        String[] values = StringUtils.splitByWholeSeparator(arrayString, delimiter);
+        Class<?> targetType = returnType.getComponentType();
+        if (targetType == null) {
+            throw new IllegalStateException("Array component type is null? " + returnType.getName());
+        }
+
+        Object o = Array.newInstance(targetType, values.length);
+        ArraySetter setter = getArraySetter(targetType);
+
+        int i = 0;
+        while (i < values.length) {
+            String valueStr = values[i];
+            try {
+                if (valueStr == null) {
+                    Array.set(o, i, null);
+                } else {
+                    setter.set(o, i, valueStr);
+                }
+            } catch (RuntimeException e) {
+                throw new SettingsException("Can't parse value " + valueStr + " to type " + targetType.getName(), e);
+            }
+
+            i++;
+        }
+
+        return o;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Object getCollectionFieldValue(
+            Properties properties,
+            String prefixName,
+            Method method,
+            String delimiter
+    ) throws SettingsException {
+        String arrayString = getStringValue(properties, prefixName, method);
+        Class<?> returnType = method.getReturnType();
+
+        String[] values = StringUtils.splitByWholeSeparator(arrayString, delimiter);
+
+        final Class<?> targetType;
+        final Collection collection;
+        ListOf listOf = method.getAnnotation(ListOf.class);
+        SetOf setOf = method.getAnnotation(SetOf.class);
+        if (listOf != null) {
+            if (returnType != List.class) {
+                throw new SettingsException("Annotation @ListOf allowed only for java.util.List return type.");
+            }
+            targetType = listOf.value();
+            collection = new ArrayList<>(values.length);
+        } else if (setOf != null) {
+            if (returnType != Set.class) {
+                throw new SettingsException("Annotation @SetOf allowed only for java.util.Set return type.");
+            }
+            targetType = setOf.value();
+
+            if (Enum.class.isAssignableFrom(targetType)) {
+                collection = new LinkedHashSet<>(values.length);
+            } else {
+                collection = EnumSet.noneOf((Class<Enum>) targetType);
+            }
+        } else {
+            throw new SettingsException("Neither @ListOf nor @SetOf annotations is set for declaring class of collection element.");
+        }
+
+        ValueParser parser = getToObjectConverter(targetType);
+
+        for (String valueStr : values) {
+            try {
+                if (valueStr == null) {
+                    collection.add(null);
+                } else {
+                    collection.add(parser.parse(valueStr));
+                }
+            } catch (RuntimeException e) {
+                throw new SettingsException("Can't parse value " + valueStr + " to type " + targetType.getName(), e);
+            }
+        }
+
+        if (listOf != null) {
+            return Collections.unmodifiableList((List<?>) collection);
+        } else {
+            return Collections.unmodifiableSet((Set<?>) collection);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map getMapFieldValue(
+            Properties properties,
+            String prefixName,
+            Method method,
+            String delimiter
+    ) throws SettingsException {
+        String arrayString = getStringValue(properties, prefixName, method);
+
+        String[] values = StringUtils.splitByWholeSeparator(arrayString, delimiter);
+
+        final Class<?> targetKeyType;
+        final Map map;
+        MapOf mapOf = method.getAnnotation(MapOf.class);
+        if (mapOf != null) {
+            targetKeyType = mapOf.key();
+
+            if (Enum.class.isAssignableFrom(targetKeyType)) {
+                map = new EnumMap(targetKeyType);
+            } else {
+                map = new LinkedHashMap(values.length);
+            }
+        } else {
+            throw new SettingsException("@MapOf annotation is not set for declaring target map elements.");
+        }
+
+        ValueParser keyParser = getToObjectConverter(targetKeyType);
+        ValueParser valueParser = getToObjectConverter(mapOf.value());
+
+        for (String part : values) {
+            String[] parts = StringUtils.splitByWholeSeparator(part, mapOf.splitter(), 2);
+            final String keyString;
+            final String valueString;
+            if (parts.length < 2) {
+                keyString = parts[0];
+                valueString = null;
+            } else {
+                keyString = parts[0];
+                valueString = parts[1];
+            }
+
+            try {
+                Object key = keyParser.parse(keyString);
+
+                if (valueString == null) {
+                    map.put(key, null);
+                } else {
+                    map.put(key, valueParser.parse(valueString));
+                }
+            } catch (RuntimeException e) {
+                throw new SettingsException("Can't parse value " + valueString + " to type " + targetKeyType.getName(), e);
+            }
+        }
+
+        return Collections.unmodifiableMap(map);
+    }
+
+    private static <T> Map<String, T> getGroupFieldValue(
+            ClassPool pool,
+            Class<T> clazz,
+            Properties properties,
+            String prefixName,
+            Method method
+    ) throws SettingsException {
+        final Class<?> returnType = method.getReturnType();
+        if (Map.class != returnType) {
+            throw new SettingsException("Group field should have Map return type");
+        }
+        @SuppressWarnings("unchecked") final Constructor<T> c = getSettingsConstructor(clazz, pool);
+
+        final String propertyName = ClassUtils.buildPropertyName(prefixName, method);
+        final String propertyNameDot = propertyName + ".";
+
+        Set<String> propertyNames = new HashSet<>();
+
+        for (String name : properties.stringPropertyNames()) {
+            if (name.startsWith(propertyNameDot)) {
+                propertyNames.add(name);
+            }
+        }
+
+        // Search for possible prefixes
+        Set<String> prefixes = new HashSet<>();
+        for (Method mm : clazz.getMethods()) {
+            final String suffix = "." + ClassUtils.buildPropertyName(null, mm);
+
+            for (String name : propertyNames) {
+                if (name.endsWith(suffix)) {
+                    final String prefix;
+                    final int prefixLen = propertyNameDot.length();
+                    final int cutLen = name.length() - suffix.length();
+                    if (prefixLen >= cutLen) {
+                        prefix = "";
+                    } else {
+                        prefix = name.substring(prefixLen, cutLen);
+                    }
+
+                    prefixes.add(prefix);
+                }
+            }
+        }
+
+        boolean required = method.getAnnotation(Optional.class) == null;
+        if (required && !prefixes.contains("")) {
+            throw new SettingsException("A default group set is required for method " + method.getName());
+        }
+
+        Map<String, T> result = new HashMap<>();
+
+        for (String p : prefixes) {
+            final String realPrefix;
+            if (StringUtils.isNotBlank(p)) {
+                realPrefix = propertyNameDot + p;
+            } else {
+                realPrefix = propertyName;
+            }
+
+            result.put(p, initialize(c, buildConstructorParameters(pool, clazz, properties, realPrefix)));
+        }
+
+        return Collections.unmodifiableMap(result);
+    }
+
+    private static InputStream getInputStream(String propertiesFile) throws IOException {
+        InputStream is = SettingsProvider.class.getResourceAsStream(propertiesFile);
+        if (is == null) {
+            is = SettingsProvider.class.getClassLoader().getResourceAsStream(propertiesFile);
+        }
+
+        return is;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static ArraySetter getArraySetter(Class<?> targetType) throws SettingsException {
+        if (String.class == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.set(o, i, valueStr);
+                }
+            };
+        } else if (Integer.class == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.set(o, i, Integer.parseInt(valueStr));
+                }
+            };
+        } else if (Integer.TYPE == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.setInt(o, i, Integer.parseInt(valueStr));
+                }
+            };
+        } else if (Long.class == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.set(o, i, Long.parseLong(valueStr));
+                }
+            };
+        } else if (Long.TYPE == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.setLong(o, i, Long.parseLong(valueStr));
+                }
+            };
+        } else if (Short.class == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.set(o, i, Short.parseShort(valueStr));
+                }
+            };
+        } else if (Short.TYPE == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.setShort(o, i, Short.parseShort(valueStr));
+                }
+            };
+        } else if (Byte.class == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.set(o, i, Byte.parseByte(valueStr));
+                }
+            };
+        } else if (Byte.TYPE == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.setByte(o, i, Byte.parseByte(valueStr));
+                }
+            };
+        } else if (Boolean.class == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.set(o, i, BooleanUtils.toBoolean(valueStr));
+                }
+            };
+        } else if (Boolean.TYPE == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.setBoolean(o, i, BooleanUtils.toBoolean(valueStr));
+                }
+            };
+        } else if (Character.class == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.set(o, i, valueStr.toCharArray()[0]);
+                }
+            };
+        } else if (Character.TYPE == targetType) {
+            return new ArraySetter() {
+                public void set(Object o, int i, String valueStr) {
+                    Array.setChar(o, i, valueStr.toCharArray()[0]);
+                }
+            };
+        } else if (Enum.class.isAssignableFrom(targetType)) {
+            return new EnumArraySetter((Class<Enum>) targetType);
+        } else {
+            throw new SettingsException("Unknown type to parse: " + targetType.getName());
+        }
+    }
+
     @SuppressWarnings({"unchecked"})
     private static ValueParser getToObjectConverter(Class<?> targetType) throws SettingsException {
         if (String.class == targetType) {
@@ -778,15 +787,6 @@ public final class SettingsProvider {
         } else {
             throw new SettingsException("Unknown type to parse: " + targetType.getName());
         }
-    }
-
-    static InputStream getInputStream(String propertiesFile) throws IOException {
-        InputStream is = SettingsProvider.class.getResourceAsStream(propertiesFile);
-        if (is == null) {
-            is = SettingsProvider.class.getClassLoader().getResourceAsStream(propertiesFile);
-        }
-
-        return is;
     }
 
     private static interface ValueParser {

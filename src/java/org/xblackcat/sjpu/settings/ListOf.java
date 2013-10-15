@@ -6,6 +6,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
+ * Defines a target element object class for list.
+ * <p/>
  * 12.02.13 11:24
  *
  * @author xBlackCat
