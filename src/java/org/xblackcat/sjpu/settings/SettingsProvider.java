@@ -23,6 +23,7 @@ import java.util.*;
  */
 public final class SettingsProvider {
     private static final Log log = LogFactory.getLog(SettingsProvider.class);
+    private static final String DEFAULT_SEPARATOR = ",";
 
     /**
      * Loads settings for specified interface from specified file.
@@ -205,12 +206,20 @@ public final class SettingsProvider {
                 value = getGroupFieldValue(pool, groupField.value(), properties, prefixName, method);
             } else {
                 final Class<?> returnType = method.getReturnType();
-                String separator = ",";
+                final String separator;
+                Separator separatorAnn = method.getAnnotation(Separator.class);
+                if (separatorAnn == null) {
+                    separator = DEFAULT_SEPARATOR;
+                } else {
+                    separator = separatorAnn.value();
+                }
 
                 if (returnType.isArray()) {
                     value = getArrayFieldValue(properties, prefixName, method, separator);
                 } else if (Collection.class.isAssignableFrom(returnType)) {
                     value = getCollectionFieldValue(properties, prefixName, method, separator);
+                } else if (Map.class.isAssignableFrom(returnType)) {
+                    value = getMapFieldValue(properties, prefixName, method, separator);
                 } else if (returnType.isInterface()) {
                     final String propertyName = ClassUtils.buildPropertyName(prefixName, method);
 
@@ -323,6 +332,63 @@ public final class SettingsProvider {
         } else {
             return Collections.unmodifiableSet((Set<?>) collection);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map getMapFieldValue(
+            Properties properties,
+            String prefixName,
+            Method method,
+            String splitter
+    ) throws SettingsException {
+        String arrayString = getStringValue(properties, prefixName, method);
+
+        String[] values = StringUtils.splitByWholeSeparator(arrayString, splitter);
+
+        final Class<?> targetKeyType;
+        final Map map;
+        MapOf mapOf = method.getAnnotation(MapOf.class);
+        if (mapOf != null) {
+            targetKeyType = mapOf.key();
+
+            if (Enum.class.isAssignableFrom(targetKeyType)) {
+                map = new EnumMap(targetKeyType);
+            } else {
+                map = new LinkedHashMap(values.length);
+            }
+        } else {
+            throw new SettingsException("@MapOf annotation is not set for declaring target map elements.");
+        }
+
+        ValueParser keyParser = getToObjectConverter(targetKeyType);
+        ValueParser valueParser = getToObjectConverter(mapOf.value());
+
+        for (String part : values) {
+            String[] parts = StringUtils.splitByWholeSeparator(part, mapOf.splitter(), 2);
+            final String keyString;
+            final String valueString;
+            if (parts.length < 2) {
+                keyString = parts[0];
+                valueString = null;
+            } else {
+                keyString = parts[0];
+                valueString = parts[1];
+            }
+
+            try {
+                Object key = keyParser.parse(keyString);
+
+                if (valueString == null) {
+                    map.put(key, null);
+                } else {
+                    map.put(key, valueParser.parse(valueString));
+                }
+            } catch (RuntimeException e) {
+                throw new SettingsException("Can't parse value " + valueString + " to type " + targetKeyType.getName(), e);
+            }
+        }
+
+        return Collections.unmodifiableMap(map);
     }
 
     @SuppressWarnings("unchecked")

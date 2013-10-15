@@ -8,10 +8,7 @@ import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * 10.01.13 11:37
@@ -110,6 +107,20 @@ public class SettingsProviderTest {
                 EnumSet.of(Numbers.One, Numbers.Three, Numbers.Seven),
                 settings.getNumberSet()
         );
+
+        Map<Numbers, String> map1 = new EnumMap<>(Numbers.class);
+        map1.put(Numbers.One, "Test-one");
+        map1.put(Numbers.Two, "Test-two");
+        map1.put(Numbers.Nine, "Test-9");
+
+        Map<Long, Numbers> map2 = new HashMap<>();
+        map2.put(2l, Numbers.Two);
+        map2.put(3l, Numbers.Three);
+        map2.put(4l, Numbers.Four);
+        map2.put(5l, Numbers.Five);
+
+        Assert.assertEquals(map1, settings.getNumberMap());
+        Assert.assertEquals(map2, settings.getOtherNumberMap());
     }
 
     @Test

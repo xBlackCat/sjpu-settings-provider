@@ -1,6 +1,7 @@
 package org.xblackcat.sjpu.settings;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -21,4 +22,10 @@ public interface ComplexSettings {
 
     @SetOf(Numbers.class)
     Set<Numbers> getNumberSet();
+
+    @MapOf(key = Numbers.class, value = String.class)
+    Map<Numbers, String> getNumberMap();
+
+    @MapOf(key = Long.class, value = Numbers.class)
+    Map<Long, Numbers> getOtherNumberMap();
 }
