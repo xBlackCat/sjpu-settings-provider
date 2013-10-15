@@ -35,9 +35,7 @@ public final class SettingsProvider {
      */
     public static <T> T get(Class<T> clazz, File file) throws SettingsException, IOException {
         try (InputStream is = new BufferedInputStream(new FileInputStream(file))) {
-            Properties properties = new Properties();
-            properties.load(new InputStreamReader(is, StandardCharsets.UTF_8));
-            return loadDefaults(clazz, properties);
+            return get(clazz, is);
         }
     }
 
@@ -65,9 +63,7 @@ public final class SettingsProvider {
      */
     public static <T> T get(Class<T> clazz, URL url) throws SettingsException, IOException {
         try (InputStream is = new BufferedInputStream(url.openStream())) {
-            Properties properties = new Properties();
-            properties.load(new InputStreamReader(is, StandardCharsets.UTF_8));
-            return loadDefaults(clazz, properties);
+            return get(clazz, is);
         }
     }
 
@@ -142,10 +138,7 @@ public final class SettingsProvider {
 
             }
 
-            Properties properties = new Properties();
-            properties.load(new InputStreamReader(is, StandardCharsets.UTF_8));
-
-            return loadDefaults(clazz, properties);
+            return get(clazz, is);
         } catch (IOException e) {
             throw new SettingsException("Can't load values for " + clazz.getName(), e);
         } finally {
@@ -159,7 +152,7 @@ public final class SettingsProvider {
         }
     }
 
-    private static <T> T loadDefaults(Class<T> clazz, Properties properties) throws SettingsException, IOException {
+    static <T> T loadDefaults(Class<T> clazz, Properties properties) throws SettingsException, IOException {
         if (log.isDebugEnabled()) {
             log.debug("Load defaults for class " + clazz.getName());
         }
@@ -212,18 +205,22 @@ public final class SettingsProvider {
                 value = getGroupFieldValue(pool, groupField.value(), properties, prefixName, method);
             } else {
                 final Class<?> returnType = method.getReturnType();
-                if (returnType.isInterface()) {
+                String separator = ",";
+
+                if (returnType.isArray()) {
+                    value = getArrayFieldValue(properties, prefixName, method, separator);
+                } else if (Collection.class.isAssignableFrom(returnType)) {
+                    value = getCollectionFieldValue(properties, prefixName, method, separator);
+                } else if (returnType.isInterface()) {
                     final String propertyName = ClassUtils.buildPropertyName(prefixName, method);
 
                     @SuppressWarnings("unchecked") final Constructor<?> c = getSettingsConstructor(returnType, pool);
 
                     value = initialize(c, buildConstructorParameters(pool, returnType, properties, propertyName));
-                } else if (returnType.isArray()) {
-                    value = getArrayFieldValue(properties, prefixName, method, ",");
                 } else {
                     String valueStr = getStringValue(properties, prefixName, method);
 
-                    value = convertToObject(method.getReturnType(), valueStr);
+                    value = getToObjectConverter(method.getReturnType()).parse(valueStr);
                 }
             }
 
@@ -268,6 +265,64 @@ public final class SettingsProvider {
         }
 
         return o;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Object getCollectionFieldValue(
+            Properties properties,
+            String prefixName,
+            Method method,
+            String splitter
+    ) throws SettingsException {
+        String arrayString = getStringValue(properties, prefixName, method);
+        Class<?> returnType = method.getReturnType();
+
+        String[] values = StringUtils.splitByWholeSeparator(arrayString, splitter);
+
+        final Class<?> targetType;
+        final Collection collection;
+        ListOf listOf = method.getAnnotation(ListOf.class);
+        SetOf setOf = method.getAnnotation(SetOf.class);
+        if (listOf != null) {
+            if (returnType != List.class) {
+                throw new SettingsException("Annotation @ListOf allowed only for java.util.List return type.");
+            }
+            targetType = listOf.value();
+            collection = new ArrayList<>(values.length);
+        } else if (setOf != null) {
+            if (returnType != Set.class) {
+                throw new SettingsException("Annotation @SetOf allowed only for java.util.Set return type.");
+            }
+            targetType = setOf.value();
+
+            if (Enum.class.isAssignableFrom(targetType)) {
+                collection = new LinkedHashSet<>(values.length);
+            } else {
+                collection = EnumSet.noneOf((Class<Enum>) targetType);
+            }
+        } else {
+            throw new SettingsException("Neither @ListOf nor @SetOf annotations is set for declaring class of collection element.");
+        }
+
+        ValueParser parser = getToObjectConverter(targetType);
+
+        for (String valueStr : values) {
+            try {
+                if (valueStr == null) {
+                    collection.add(null);
+                } else {
+                    collection.add(parser.parse(valueStr));
+                }
+            } catch (RuntimeException e) {
+                throw new SettingsException("Can't parse value " + valueStr + " to type " + targetType.getName(), e);
+            }
+        }
+
+        if (listOf != null) {
+            return Collections.unmodifiableList((List<?>) collection);
+        } else {
+            return Collections.unmodifiableSet((Set<?>) collection);
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -608,34 +663,55 @@ public final class SettingsProvider {
         return valueStr;
     }
 
-    private static Object convertToObject(Class<?> targetType, String valueStr) throws SettingsException {
-        final Object value;
-        try {
-            if (valueStr == null) {
-                value = null;
-            } else if (String.class == targetType) {
-                value = valueStr;
-            } else if (Integer.class == targetType || Integer.TYPE == targetType) {
-                value = Integer.parseInt(valueStr);
-            } else if (Long.class == targetType || Long.TYPE == targetType) {
-                value = Long.parseLong(valueStr);
-            } else if (Short.class == targetType || Short.TYPE == targetType) {
-                value = Short.parseShort(valueStr);
-            } else if (Byte.class == targetType || Byte.TYPE == targetType) {
-                value = Byte.parseByte(valueStr);
-            } else if (Boolean.class == targetType || Boolean.TYPE == targetType) {
-                value = BooleanUtils.toBoolean(valueStr);
-            } else if (Character.class == targetType || Character.TYPE == targetType) {
-                value = valueStr.toCharArray()[0];
-            } else if (Enum.class.isAssignableFrom(targetType)) {
-                value = ClassUtils.searchForEnum((Class<Enum>) targetType, valueStr);
-            } else {
-                throw new SettingsException("Unknown type to parse: " + targetType.getName());
-            }
-        } catch (RuntimeException e) {
-            throw new SettingsException("Can't parse value " + valueStr + " to type " + targetType.getName(), e);
+    @SuppressWarnings({"unchecked"})
+    private static ValueParser getToObjectConverter(Class<?> targetType) throws SettingsException {
+        if (String.class == targetType) {
+            return new ValueParser() {
+                public Object parse(String valueStr) {
+                    return valueStr;
+                }
+            };
+        } else if (Integer.class == targetType || Integer.TYPE == targetType) {
+            return new ValueParser() {
+                public Object parse(String valueStr) {
+                    return Integer.parseInt(valueStr);
+                }
+            };
+        } else if (Long.class == targetType || Long.TYPE == targetType) {
+            return new ValueParser() {
+                public Object parse(String valueStr) {
+                    return Long.parseLong(valueStr);
+                }
+            };
+        } else if (Short.class == targetType || Short.TYPE == targetType) {
+            return new ValueParser() {
+                public Object parse(String valueStr) {
+                    return Short.parseShort(valueStr);
+                }
+            };
+        } else if (Byte.class == targetType || Byte.TYPE == targetType) {
+            return new ValueParser() {
+                public Object parse(String valueStr) {
+                    return Byte.parseByte(valueStr);
+                }
+            };
+        } else if (Boolean.class == targetType || Boolean.TYPE == targetType) {
+            return new ValueParser() {
+                public Object parse(String valueStr) {
+                    return BooleanUtils.toBoolean(valueStr);
+                }
+            };
+        } else if (Character.class == targetType || Character.TYPE == targetType) {
+            return new ValueParser() {
+                public Object parse(String valueStr) {
+                    return valueStr.toCharArray()[0];
+                }
+            };
+        } else if (Enum.class.isAssignableFrom(targetType)) {
+            return new EnumValueParser((Class<Enum>) targetType);
+        } else {
+            throw new SettingsException("Unknown type to parse: " + targetType.getName());
         }
-        return value;
     }
 
     static InputStream getInputStream(String propertiesFile) throws IOException {
@@ -645,6 +721,22 @@ public final class SettingsProvider {
         }
 
         return is;
+    }
+
+    private static interface ValueParser {
+        Object parse(String valueStr);
+    }
+
+    private static class EnumValueParser implements ValueParser {
+        private final Class<Enum> targetType;
+
+        private EnumValueParser(Class<Enum> targetType) {
+            this.targetType = targetType;
+        }
+
+        public Object parse(String valueStr) {
+            return ClassUtils.searchForEnum(targetType, valueStr);
+        }
     }
 
     private static interface ArraySetter {

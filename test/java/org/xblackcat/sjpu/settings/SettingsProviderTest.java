@@ -8,6 +8,10 @@ import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Properties;
 
 /**
  * 10.01.13 11:37
@@ -93,5 +97,53 @@ public class SettingsProviderTest {
 
         Assert.assertArrayEquals(new int[]{1, 10, 20, 50, 500, 1000}, settings.getIds());
         Assert.assertArrayEquals(new Numbers[]{Numbers.One, Numbers.Three, Numbers.Seven}, settings.getValues());
+
+        Assert.assertEquals(
+                Arrays.asList(Numbers.One, Numbers.Three, Numbers.Seven, Numbers.One, Numbers.Three, Numbers.Seven),
+                settings.getNumberList()
+        );
+        Assert.assertEquals(
+                new HashSet<>(Arrays.asList(Numbers.One, Numbers.Three, Numbers.Seven)),
+                settings.getNumberSet()
+        );
+        Assert.assertEquals(
+                EnumSet.of(Numbers.One, Numbers.Three, Numbers.Seven),
+                settings.getNumberSet()
+        );
+    }
+
+    @Test
+    public void invalidComplexSettings() throws IOException {
+        Properties properties = new Properties();
+        properties.setProperty("not.annotated", "true");
+        properties.setProperty("wrong.annotated", "true");
+        try {
+            SettingsProvider.loadDefaults(InvalidComplexSettings1.class, properties);
+            Assert.fail("Exception expected");
+        } catch (SettingsException e) {
+            System.out.println(e.getMessage());
+            Assert.assertTrue(true);
+        }
+        try {
+            SettingsProvider.loadDefaults(InvalidComplexSettings2.class, properties);
+            Assert.fail("Exception expected");
+        } catch (SettingsException e) {
+            System.out.println(e.getMessage());
+            Assert.assertTrue(true);
+        }
+        try {
+            SettingsProvider.loadDefaults(InvalidComplexSettings3.class, properties);
+            Assert.fail("Exception expected");
+        } catch (SettingsException e) {
+            System.out.println(e.getMessage());
+            Assert.assertTrue(true);
+        }
+        try {
+            SettingsProvider.loadDefaults(InvalidComplexSettings4.class, properties);
+            Assert.fail("Exception expected");
+        } catch (SettingsException e) {
+            System.out.println(e.getMessage());
+            Assert.assertTrue(true);
+        }
     }
 }
