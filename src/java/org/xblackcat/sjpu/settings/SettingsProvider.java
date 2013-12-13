@@ -665,7 +665,7 @@ public final class SettingsProvider {
                     Array.set(o, i, Integer.parseInt(valueStr));
                 }
             };
-        } else if (Integer.TYPE == targetType) {
+        } else if (int.class == targetType) {
             return new ArraySetter() {
                 public void set(Object o, int i, String valueStr) {
                     Array.setInt(o, i, Integer.parseInt(valueStr));
@@ -677,7 +677,7 @@ public final class SettingsProvider {
                     Array.set(o, i, Long.parseLong(valueStr));
                 }
             };
-        } else if (Long.TYPE == targetType) {
+        } else if (long.class == targetType) {
             return new ArraySetter() {
                 public void set(Object o, int i, String valueStr) {
                     Array.setLong(o, i, Long.parseLong(valueStr));
@@ -689,7 +689,7 @@ public final class SettingsProvider {
                     Array.set(o, i, Short.parseShort(valueStr));
                 }
             };
-        } else if (Short.TYPE == targetType) {
+        } else if (short.class == targetType) {
             return new ArraySetter() {
                 public void set(Object o, int i, String valueStr) {
                     Array.setShort(o, i, Short.parseShort(valueStr));
@@ -701,7 +701,7 @@ public final class SettingsProvider {
                     Array.set(o, i, Byte.parseByte(valueStr));
                 }
             };
-        } else if (Byte.TYPE == targetType) {
+        } else if (byte.class == targetType) {
             return new ArraySetter() {
                 public void set(Object o, int i, String valueStr) {
                     Array.setByte(o, i, Byte.parseByte(valueStr));
@@ -713,7 +713,7 @@ public final class SettingsProvider {
                     Array.set(o, i, BooleanUtils.toBoolean(valueStr));
                 }
             };
-        } else if (Boolean.TYPE == targetType) {
+        } else if (boolean.class == targetType) {
             return new ArraySetter() {
                 public void set(Object o, int i, String valueStr) {
                     Array.setBoolean(o, i, BooleanUtils.toBoolean(valueStr));
@@ -725,7 +725,7 @@ public final class SettingsProvider {
                     Array.set(o, i, valueStr.toCharArray()[0]);
                 }
             };
-        } else if (Character.TYPE == targetType) {
+        } else if (char.class == targetType) {
             return new ArraySetter() {
                 public void set(Object o, int i, String valueStr) {
                     Array.setChar(o, i, valueStr.toCharArray()[0]);
@@ -746,37 +746,37 @@ public final class SettingsProvider {
                     return valueStr;
                 }
             };
-        } else if (Integer.class == targetType || Integer.TYPE == targetType) {
+        } else if (Integer.class == targetType || int.class == targetType) {
             return new ValueParser() {
                 public Object parse(String valueStr) {
                     return Integer.parseInt(valueStr);
                 }
             };
-        } else if (Long.class == targetType || Long.TYPE == targetType) {
+        } else if (Long.class == targetType || long.class == targetType) {
             return new ValueParser() {
                 public Object parse(String valueStr) {
                     return Long.parseLong(valueStr);
                 }
             };
-        } else if (Short.class == targetType || Short.TYPE == targetType) {
+        } else if (Short.class == targetType || short.class == targetType) {
             return new ValueParser() {
                 public Object parse(String valueStr) {
                     return Short.parseShort(valueStr);
                 }
             };
-        } else if (Byte.class == targetType || Byte.TYPE == targetType) {
+        } else if (Byte.class == targetType || byte.class == targetType) {
             return new ValueParser() {
                 public Object parse(String valueStr) {
                     return Byte.parseByte(valueStr);
                 }
             };
-        } else if (Boolean.class == targetType || Boolean.TYPE == targetType) {
+        } else if (Boolean.class == targetType || boolean.class == targetType) {
             return new ValueParser() {
                 public Object parse(String valueStr) {
                     return BooleanUtils.toBoolean(valueStr);
                 }
             };
-        } else if (Character.class == targetType || Character.TYPE == targetType) {
+        } else if (Character.class == targetType || char.class == targetType) {
             return new ValueParser() {
                 public Object parse(String valueStr) {
                     return valueStr.toCharArray()[0];
