@@ -73,6 +73,16 @@ public class SettingsProviderTest {
     }
 
     @Test
+    public void noSettings() throws SettingsException {
+        {
+            Assert.assertNull(SettingsProvider.get(SettingsBlank.class, "/no-settings.properties"));
+
+            Assert.assertNull(SettingsProvider.get(SettingsBlank.class, "/no-settings.properties", true));
+        }
+
+    }
+
+    @Test
     public void combinedSettings() throws SettingsException, IOException {
         final CombinedSettings settings;
         try (InputStream is = getClass().getResourceAsStream("/source/combined-settings.properties")) {

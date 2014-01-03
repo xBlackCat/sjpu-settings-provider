@@ -5,6 +5,7 @@ package org.xblackcat.sjpu.settings;
  *
  * @author xBlackCat
  */
+@Optional
 public interface SettingsBlank {
     int getSimpleName();
 
