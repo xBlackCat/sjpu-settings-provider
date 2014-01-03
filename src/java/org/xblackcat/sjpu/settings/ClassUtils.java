@@ -93,7 +93,7 @@ public class ClassUtils {
     static <T> List<Object> buildConstructorParameters(
             ClassPool pool,
             Class<T> clazz,
-            Properties properties,
+            Map<String, String> properties,
             String prefixName
     ) throws SettingsException {
         List<Object> values = new ArrayList<>();
@@ -236,7 +236,7 @@ public class ClassUtils {
 
             toStringBody.append(" + \"");
             toStringBody.append(fieldName);
-            toStringBody.append(" + \" (");
+            toStringBody.append(" (");
             toStringBody.append(makeFieldName(fieldName));
             toStringBody.append(") = \\\"\" + java.lang.String.valueOf(this.");
             toStringBody.append(fieldName);
@@ -281,12 +281,12 @@ public class ClassUtils {
         }
     }
 
-    static String getStringValue(Properties properties, String prefixName, Method m) throws SettingsException {
+    static String getStringValue(Map<String, String> properties, String prefixName, Method m) throws SettingsException {
         final Class<?> returnType = m.getReturnType();
 
         final String propertyName = buildPropertyName(prefixName, m);
 
-        String valueStr = properties.getProperty(propertyName);
+        String valueStr = properties.get(propertyName);
         if (log.isTraceEnabled()) {
             log.trace("Property " + propertyName + " for method " + m.getName() + " is " + valueStr);
         }
@@ -327,7 +327,7 @@ public class ClassUtils {
 
     @SuppressWarnings("unchecked")
     private static Object getArrayFieldValue(
-            Properties properties,
+            Map<String, String> properties,
             String prefixName,
             Method method,
             String delimiter
@@ -365,7 +365,7 @@ public class ClassUtils {
 
     @SuppressWarnings("unchecked")
     private static Object getCollectionFieldValue(
-            Properties properties,
+            Map<String, String> properties,
             String prefixName,
             Method method,
             String delimiter
@@ -423,7 +423,7 @@ public class ClassUtils {
 
     @SuppressWarnings("unchecked")
     private static Map getMapFieldValue(
-            Properties properties,
+            Map<String, String> properties,
             String prefixName,
             Method method,
             String delimiter
@@ -481,7 +481,7 @@ public class ClassUtils {
     private static <T> Map<String, T> getGroupFieldValue(
             ClassPool pool,
             Class<T> clazz,
-            Properties properties,
+            Map<String, String> properties,
             String prefixName,
             Method method
     ) throws SettingsException {
@@ -496,7 +496,7 @@ public class ClassUtils {
 
         Set<String> propertyNames = new HashSet<>();
 
-        for (String name : properties.stringPropertyNames()) {
+        for (String name : properties.keySet()) {
             if (name.startsWith(propertyNameDot)) {
                 propertyNames.add(name);
             }
@@ -554,5 +554,15 @@ public class ClassUtils {
         } catch (InvocationTargetException e) {
             throw new SettingsException("My class produces an exception :(", e);
         }
+    }
+
+    static <T> boolean allMethodsHaveDefaults(Class<T> clazz) {
+        for (Method m : clazz.getDeclaredMethods()) {
+            if (!m.isAnnotationPresent(DefaultValue.class)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

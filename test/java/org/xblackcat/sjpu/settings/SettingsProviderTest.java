@@ -132,32 +132,32 @@ public class SettingsProviderTest {
 
     @Test
     public void invalidComplexSettings() throws IOException {
-        Properties properties = new Properties();
-        properties.setProperty("not.annotated", "true");
-        properties.setProperty("wrong.annotated", "true");
+        Map<String, String> properties = new HashMap<>();
+        properties.put("not.annotated", "true");
+        properties.put("wrong.annotated", "true");
         try {
-            SettingsProvider.loadDefaults(InvalidComplexSettings1.class, properties);
+            SettingsProvider.loadValues(InvalidComplexSettings1.class, properties);
             Assert.fail("Exception expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());
             Assert.assertTrue(true);
         }
         try {
-            SettingsProvider.loadDefaults(InvalidComplexSettings2.class, properties);
+            SettingsProvider.loadValues(InvalidComplexSettings2.class, properties);
             Assert.fail("Exception expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());
             Assert.assertTrue(true);
         }
         try {
-            SettingsProvider.loadDefaults(InvalidComplexSettings3.class, properties);
+            SettingsProvider.loadValues(InvalidComplexSettings3.class, properties);
             Assert.fail("Exception expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());
             Assert.assertTrue(true);
         }
         try {
-            SettingsProvider.loadDefaults(InvalidComplexSettings4.class, properties);
+            SettingsProvider.loadValues(InvalidComplexSettings4.class, properties);
             Assert.fail("Exception expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());

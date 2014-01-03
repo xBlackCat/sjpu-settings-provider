@@ -36,6 +36,7 @@
         <SOURCES>
           <root url="jar://D:/Libraries/Java/apache/commons-lang3-3.1-src.zip!/commons-lang3-3.1-src/src/main/java" />
           <root url="jar://D:/Libraries/Java/apache/commons-lang3-3.1-src.zip!/commons-lang3-3.1-src/src/test/java" />
+          <root url="jar://$USER_HOME$/.ideaLibSources/commons-lang3-3.0-sources.jar!/" />
         </SOURCES>
       </library>
     </orderEntry>
