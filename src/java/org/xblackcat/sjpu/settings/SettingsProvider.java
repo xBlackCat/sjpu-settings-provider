@@ -156,8 +156,7 @@ public final class SettingsProvider {
             final Properties properties = new Properties() {
                 @Override
                 public synchronized Object put(Object key, Object value) {
-                    shadow.put(ObjectUtils.toString(key, null), ObjectUtils.toString(value, null));
-                    return super.put(key, value);
+                    return shadow.put(ObjectUtils.toString(key, null), ObjectUtils.toString(value, null));
                 }
             };
             properties.load(new InputStreamReader(is, StandardCharsets.UTF_8));
