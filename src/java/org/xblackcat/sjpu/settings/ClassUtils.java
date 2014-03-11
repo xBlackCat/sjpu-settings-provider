@@ -138,7 +138,7 @@ public class ClassUtils {
         return values;
     }
 
-    static <T> Constructor<T> getSettingsConstructor(Class<T> clazz, ClassPool pool) throws SettingsException {
+    static synchronized <T> Constructor<T> getSettingsConstructor(Class<T> clazz, ClassPool pool) throws SettingsException {
         final String implName = clazz.getName() + "$Impl";
         Class<?> aClass;
         try {
@@ -153,7 +153,7 @@ public class ClassUtils {
             }
         }
 
-        // We generate a class with single constructor
+        // A class with a single constructor has been generated
         @SuppressWarnings({"unchecked", "UnnecessaryLocalVariable"})
         final Constructor<T> constructor = (Constructor<T>) aClass.getConstructors()[0];
         return constructor;
@@ -188,8 +188,8 @@ public class ClassUtils {
             if (m.getParameterTypes().length > 0) {
                 throw new SettingsException(
                         "Method " +
-                                m.toString() +
-                                " has parameters - can't be processed as getter"
+                        m.toString() +
+                        " has parameters - can't be processed as getter"
                 );
             }
 
@@ -319,7 +319,7 @@ public class ClassUtils {
         if (returnType.isPrimitive() && (valueStr == null || valueStr.length() == 0)) {
             throw new SettingsException(
                     "Default value should be set for primitive type with @SettingField annotation for method " +
-                            m.getName()
+                    m.getName()
             );
         }
         return valueStr;
