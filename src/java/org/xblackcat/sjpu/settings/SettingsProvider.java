@@ -1,5 +1,6 @@
 package org.xblackcat.sjpu.settings;
 
+import javassist.ClassClassPath;
 import javassist.ClassPool;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.logging.Log;
@@ -307,7 +308,9 @@ public final class SettingsProvider {
         }
 
         final String prefixName;
-        final ClassPool pool = ClassPool.getDefault();
+        final ClassPool pool = new ClassPool(true);
+        pool.appendClassPath(new ClassClassPath(SettingsProvider.class));
+        pool.appendClassPath(new ClassClassPath(clazz));
         final Prefix prefixAnn = clazz.getAnnotation(Prefix.class);
         if (prefixAnn != null) {
             prefixName = prefixAnn.value();

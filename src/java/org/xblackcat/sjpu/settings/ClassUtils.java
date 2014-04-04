@@ -188,8 +188,8 @@ public class ClassUtils {
             if (m.getParameterTypes().length > 0) {
                 throw new SettingsException(
                         "Method " +
-                        m.toString() +
-                        " has parameters - can't be processed as getter"
+                                m.toString() +
+                                " has parameters - can't be processed as getter"
                 );
             }
 
@@ -319,7 +319,7 @@ public class ClassUtils {
         if (returnType.isPrimitive() && (valueStr == null || valueStr.length() == 0)) {
             throw new SettingsException(
                     "Default value should be set for primitive type with @SettingField annotation for method " +
-                    m.getName()
+                            m.getName()
             );
         }
         return valueStr;

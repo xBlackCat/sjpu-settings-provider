@@ -15,7 +15,9 @@
           <root url="jar://$MODULE_DIR$/lib/javassist.jar!/" />
         </CLASSES>
         <JAVADOC />
-        <SOURCES />
+        <SOURCES>
+          <root url="jar://D:/Libraries/Java/ByteCode/javassist-3.18.0-GA.zip!/javassist-3.18.0-GA/src/main" />
+        </SOURCES>
       </library>
     </orderEntry>
     <orderEntry type="module-library">
