@@ -2,9 +2,10 @@ package org.xblackcat.sjpu.settings;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.xblackcat.sjpu.settings.config.AConfig;
+import org.xblackcat.sjpu.settings.config.ClassUtils;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -27,29 +28,26 @@ public class SettingsProviderTest {
     @Test
     public void loadSettings() throws SettingsException, IOException, URISyntaxException {
         {
-            Settings settings = SettingsProvider.get(Settings.class);
+            Settings settings = Config.get(Settings.class);
 
             Assert.assertEquals(1, settings.getSimpleName());
             Assert.assertEquals(42, settings.getComplexNameWithABBR());
         }
         {
-            SettingsBlank testSettings = SettingsProvider.get(SettingsBlank.class, "/source/settings.properties");
+            SettingsBlank testSettings = Config.use("/source/settings.properties").get(SettingsBlank.class);
 
             Assert.assertEquals(1, testSettings.getSimpleName());
             Assert.assertEquals(42, testSettings.getComplexNameWithABBR());
         }
         {
             final URL resource = getClass().getResource("/source/settings.properties");
-            SettingsBlank testSettings = SettingsProvider.get(
-                    SettingsBlank.class,
-                    resource.toURI()
-            );
+            SettingsBlank testSettings = Config.use(resource).get(SettingsBlank.class);
 
             Assert.assertEquals(1, testSettings.getSimpleName());
             Assert.assertEquals(42, testSettings.getComplexNameWithABBR());
         }
         {
-            SettingsPrefix testSettings = SettingsProvider.get(SettingsPrefix.class);
+            SettingsPrefix testSettings = Config.get(SettingsPrefix.class);
 
             Assert.assertEquals(1, testSettings.getSimpleName());
             Assert.assertEquals(42, testSettings.getComplexNameWithABBR());
@@ -57,14 +55,14 @@ public class SettingsProviderTest {
 
         // Default value is not set for primitive field
         try {
-            SettingsProvider.get(Settings.class, "/source/settings-blank.properties");
+            Config.use("/source/settings-blank.properties").get(Settings.class);
             Assert.fail("Exception is expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());
             Assert.assertTrue(true);
         }
         try {
-            SettingsProvider.get(SettingsBlank.class, "/source/settings-blank.properties");
+            Config.use("/source/settings-blank.properties").get(SettingsBlank.class);
             Assert.fail("Exception is expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());
@@ -75,29 +73,36 @@ public class SettingsProviderTest {
     @Test
     public void noSettings() throws SettingsException {
         {
-            Assert.assertNull(SettingsProvider.get(SettingsBlank.class, "/no-settings.properties"));
+            Assert.assertNull(Config.use("/no-settings.properties").get(SettingsBlank.class));
 
-            Assert.assertNull(SettingsProvider.get(SettingsBlank.class, "/no-settings.properties", true));
+            Assert.assertNull(Config.use("/no-settings.properties").get(SettingsBlank.class, true));
         }
 
     }
 
     @Test
     public void combinedSettings() throws SettingsException, IOException {
-        final CombinedSettings settings;
-        try (InputStream is = getClass().getResourceAsStream("/source/combined-settings.properties")) {
-            settings = SettingsProvider.get(CombinedSettings.class, is);
-        }
+        final CombinedSettings settings = Config.use("/source/combined-settings.properties").get(CombinedSettings.class);
 
         Assert.assertEquals(1, settings.getSimpleName());
         Assert.assertEquals(42, settings.getComplexNameWithABBR());
         Assert.assertEquals("Test", settings.getValue());
         Assert.assertEquals("Another", settings.getAnotherValue());
+
+        IConfig conf = Config.use("/source/combined-settings.properties");
+        Settings s = conf.get(Settings.class);
+        Settings2 s2 = conf.get(Settings2.class);
+
+        Assert.assertEquals(1, s.getSimpleName());
+        Assert.assertEquals(42, s.getComplexNameWithABBR());
+
+        Assert.assertEquals("Test", s2.getValue());
+        Assert.assertEquals("Another", s2.getAnotherValue());
     }
 
     @Test
     public void complexSettings() throws SettingsException, IOException {
-        ComplexSettings settings = SettingsProvider.get(ComplexSettings.class);
+        ComplexSettings settings = Config.get(ComplexSettings.class);
 
         Assert.assertArrayEquals(new int[]{1, 10, 20, 50, 500, 1000}, settings.getIds());
         Assert.assertArrayEquals(new Numbers[]{Numbers.One, Numbers.Three, Numbers.Seven}, settings.getValues());
@@ -132,32 +137,38 @@ public class SettingsProviderTest {
 
     @Test
     public void invalidComplexSettings() throws IOException {
-        Map<String, String> properties = new HashMap<>();
-        properties.put("not.annotated", "true");
-        properties.put("wrong.annotated", "true");
+        IConfig conf = new AConfig() {
+            @Override
+            protected Map<String, String> loadProperties() throws IOException, SettingsException {
+                final Map<String, String> properties = new HashMap<>();
+                properties.put("not.annotated", "true");
+                properties.put("wrong.annotated", "true");
+                return properties;
+            }
+        };
         try {
-            SettingsProvider.loadValues(InvalidComplexSettings1.class, properties, null);
+            conf.get(InvalidComplexSettings1.class);
             Assert.fail("Exception expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());
             Assert.assertTrue(true);
         }
         try {
-            SettingsProvider.loadValues(InvalidComplexSettings2.class, properties, null);
+            conf.get(InvalidComplexSettings2.class);
             Assert.fail("Exception expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());
             Assert.assertTrue(true);
         }
         try {
-            SettingsProvider.loadValues(InvalidComplexSettings3.class, properties, null);
+            conf.get(InvalidComplexSettings3.class);
             Assert.fail("Exception expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());
             Assert.assertTrue(true);
         }
         try {
-            SettingsProvider.loadValues(InvalidComplexSettings4.class, properties, null);
+            conf.get(InvalidComplexSettings4.class);
             Assert.fail("Exception expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());

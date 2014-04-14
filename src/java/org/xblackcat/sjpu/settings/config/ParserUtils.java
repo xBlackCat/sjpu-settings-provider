@@ -1,6 +1,7 @@
-package org.xblackcat.sjpu.settings;
+package org.xblackcat.sjpu.settings.config;
 
 import org.apache.commons.lang3.BooleanUtils;
+import org.xblackcat.sjpu.settings.SettingsException;
 
 import java.lang.reflect.Array;
 

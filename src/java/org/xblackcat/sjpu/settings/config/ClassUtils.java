@@ -1,9 +1,10 @@
-package org.xblackcat.sjpu.settings;
+package org.xblackcat.sjpu.settings.config;
 
 import javassist.*;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.xblackcat.sjpu.settings.SettingsException;
 import org.xblackcat.sjpu.settings.ann.*;
 
 import java.lang.reflect.Array;
