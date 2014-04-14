@@ -1,4 +1,4 @@
-package org.xblackcat.sjpu.settings;
+package org.xblackcat.sjpu.settings.ann;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -6,8 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Set custom separator for {@linkplain org.xblackcat.sjpu.settings.ListOf @ListOf}, {@linkplain org.xblackcat.sjpu.settings.SetOf @SetOf}
- * and {@linkplain org.xblackcat.sjpu.settings.MapOf @MapOf} annotations
+ * Additional information for mapping value from .property file to field: default value if property is not defined in .properties file.
  * <p/>
  * 12.02.13 11:24
  *
@@ -15,6 +14,9 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
-public @interface Delimiter {
+public @interface DefaultValue {
+    /**
+     * Default value for the field in string representation.
+     */
     String value();
 }

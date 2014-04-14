@@ -1,5 +1,7 @@
 package org.xblackcat.sjpu.settings;
 
+import org.xblackcat.sjpu.settings.ann.SetOf;
+
 import java.util.List;
 
 /**

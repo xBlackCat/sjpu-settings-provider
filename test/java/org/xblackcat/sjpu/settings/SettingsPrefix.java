@@ -1,5 +1,8 @@
 package org.xblackcat.sjpu.settings;
 
+import org.xblackcat.sjpu.settings.ann.Prefix;
+import org.xblackcat.sjpu.settings.ann.SettingsSource;
+
 /**
  * 24.07.13 13:29
  *

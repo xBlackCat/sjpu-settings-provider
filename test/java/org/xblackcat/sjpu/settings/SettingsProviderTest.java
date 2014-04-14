@@ -136,28 +136,28 @@ public class SettingsProviderTest {
         properties.put("not.annotated", "true");
         properties.put("wrong.annotated", "true");
         try {
-            SettingsProvider.loadValues(InvalidComplexSettings1.class, properties);
+            SettingsProvider.loadValues(InvalidComplexSettings1.class, properties, null);
             Assert.fail("Exception expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());
             Assert.assertTrue(true);
         }
         try {
-            SettingsProvider.loadValues(InvalidComplexSettings2.class, properties);
+            SettingsProvider.loadValues(InvalidComplexSettings2.class, properties, null);
             Assert.fail("Exception expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());
             Assert.assertTrue(true);
         }
         try {
-            SettingsProvider.loadValues(InvalidComplexSettings3.class, properties);
+            SettingsProvider.loadValues(InvalidComplexSettings3.class, properties, null);
             Assert.fail("Exception expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());
             Assert.assertTrue(true);
         }
         try {
-            SettingsProvider.loadValues(InvalidComplexSettings4.class, properties);
+            SettingsProvider.loadValues(InvalidComplexSettings4.class, properties, null);
             Assert.fail("Exception expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());

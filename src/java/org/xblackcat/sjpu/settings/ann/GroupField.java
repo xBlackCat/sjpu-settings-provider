@@ -1,4 +1,4 @@
-package org.xblackcat.sjpu.settings;
+package org.xblackcat.sjpu.settings.ann;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -6,14 +6,12 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Default resource name for loading settings from.
- * <p/>
- * 12.02.13 11:23
+ * 12.02.13 11:24
  *
  * @author xBlackCat
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.TYPE})
-public @interface SettingsSource {
-    String value();
+@Target({ElementType.METHOD})
+public @interface GroupField {
+    Class<?> value();
 }

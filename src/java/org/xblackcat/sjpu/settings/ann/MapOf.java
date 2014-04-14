@@ -1,4 +1,4 @@
-package org.xblackcat.sjpu.settings;
+package org.xblackcat.sjpu.settings.ann;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

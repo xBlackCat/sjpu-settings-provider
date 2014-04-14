@@ -1,4 +1,4 @@
-package org.xblackcat.sjpu.settings;
+package org.xblackcat.sjpu.settings.ann;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -16,7 +16,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD})
 public @interface PropertyName {
     /**
-     * Defines a property name to be mapped to the method. If a prefix defined with {@linkplain org.xblackcat.sjpu.settings.Prefix}
+     * Defines a property name to be mapped to the method. If a prefix defined with {@linkplain Prefix}
      * annotation it will be added at the beginning of the property name. By default property name will be generated from
      * annotated method name as follow:
      * <ul>

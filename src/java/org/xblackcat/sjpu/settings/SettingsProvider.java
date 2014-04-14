@@ -5,6 +5,10 @@ import javassist.ClassPool;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.xblackcat.sjpu.settings.ann.DefaultValue;
+import org.xblackcat.sjpu.settings.ann.Optional;
+import org.xblackcat.sjpu.settings.ann.Prefix;
+import org.xblackcat.sjpu.settings.ann.SettingsSource;
 
 import java.io.*;
 import java.lang.reflect.Constructor;
@@ -24,7 +28,7 @@ public final class SettingsProvider {
     /**
      * Loads settings for specified interface from specified file.
      * <p/>
-     * If specified class marked with {@linkplain org.xblackcat.sjpu.settings.Optional} annotation a <code>null</code> value will be
+     * If specified class marked with {@linkplain org.xblackcat.sjpu.settings.ann.Optional} annotation a <code>null</code> value will be
      * returned in case when specified file is <code>null</code> or not exists.
      *
      * @param clazz target interface class for holding settings.
@@ -60,7 +64,7 @@ public final class SettingsProvider {
     /**
      * Loads settings for specified interface from specified resource specified by URI.
      * <p/>
-     * If specified class marked with {@linkplain org.xblackcat.sjpu.settings.Optional} annotation a <code>null</code> value will be
+     * If specified class marked with {@linkplain org.xblackcat.sjpu.settings.ann.Optional} annotation a <code>null</code> value will be
      * returned in case when specified uri is <code>null</code>.
      *
      * @param clazz target interface class for holding settings.
@@ -90,7 +94,7 @@ public final class SettingsProvider {
     /**
      * Loads settings for specified interface from specified resource specified by URL.
      * <p/>
-     * If specified class marked with {@linkplain org.xblackcat.sjpu.settings.Optional} annotation a <code>null</code> value will be
+     * If specified class marked with {@linkplain org.xblackcat.sjpu.settings.ann.Optional} annotation a <code>null</code> value will be
      * returned in case when specified url is <code>null</code>.
      *
      * @param clazz target interface class for holding settings.
@@ -126,7 +130,7 @@ public final class SettingsProvider {
     /**
      * Loads settings for specified interface from specified InputStream. Input stream remains open after reading.
      * <p/>
-     * If specified class marked with {@linkplain org.xblackcat.sjpu.settings.Optional} annotation a <code>null</code> value will be
+     * If specified class marked with {@linkplain org.xblackcat.sjpu.settings.ann.Optional} annotation a <code>null</code> value will be
      * returned in case when specified {@linkplain java.io.InputStream} is <code>null</code>.
      *
      * @param clazz target interface class for holding settings.
@@ -179,21 +183,21 @@ public final class SettingsProvider {
             );
         }
 
-        return loadValues(clazz, shadow);
+        return loadValues(clazz, shadow, getPrefix(clazz));
     }
 
     /**
      * Loads settings for specified interface. A default location of resource file is used. Default location is specified
-     * by {@linkplain SettingsSource @SettingsSource} annotation.
+     * by {@linkplain org.xblackcat.sjpu.settings.ann.SettingsSource @SettingsSource} annotation.
      * <p/>
-     * If specified class marked with {@linkplain org.xblackcat.sjpu.settings.Optional} annotation a <code>null</code> value will be
+     * If specified class marked with {@linkplain org.xblackcat.sjpu.settings.ann.Optional} annotation a <code>null</code> value will be
      * returned in case when required resource is not exists.
      *
      * @param clazz target interface class for holding settings.
      * @param <T>   target interface for holding settings.
      * @return initialized implementation of the specified interface class.
      * @throws org.xblackcat.sjpu.settings.SettingsException if interface methods are not annotated or interface is not annotated with
-     *                                                       {@linkplain SettingsSource @SettingsSource}
+     *                                                       {@linkplain org.xblackcat.sjpu.settings.ann.SettingsSource @SettingsSource}
      */
     public static <T> T get(Class<T> clazz) throws SettingsException {
         return get(clazz, clazz.isAnnotationPresent(Optional.class));
@@ -201,14 +205,14 @@ public final class SettingsProvider {
 
     /**
      * Loads settings for specified interface. A default location of resource file is used. Default location is specified
-     * by {@linkplain org.xblackcat.sjpu.settings.SettingsSource @SettingsSource} annotation.
+     * by {@linkplain org.xblackcat.sjpu.settings.ann.SettingsSource @SettingsSource} annotation.
      *
      * @param clazz    target interface class for holding settings.
      * @param optional <code>true</code> to return <code>null</code> instead of throwing exception if resource is missing.
      * @param <T>      target interface for holding settings.
      * @return initialized implementation of the specified interface class.
      * @throws SettingsException if interface methods are not annotated or interface is not annotated with
-     *                           {@linkplain org.xblackcat.sjpu.settings.SettingsSource @SettingsSource}
+     *                           {@linkplain org.xblackcat.sjpu.settings.ann.SettingsSource @SettingsSource}
      */
     public static <T> T get(Class<T> clazz, boolean optional) throws SettingsException {
         final SettingsSource sourceAnn = clazz.getAnnotation(SettingsSource.class);
@@ -232,7 +236,7 @@ public final class SettingsProvider {
     /**
      * Loads settings for specified interface from specified resource in class path.
      * <p/>
-     * If specified class marked with {@linkplain org.xblackcat.sjpu.settings.Optional} annotation a <code>null</code> value will be
+     * If specified class marked with {@linkplain org.xblackcat.sjpu.settings.ann.Optional} annotation a <code>null</code> value will be
      * returned in case when specified resource name is <code>null</code> or resource is not exists.
      *
      * @param clazz        target interface class for holding settings.
@@ -282,7 +286,7 @@ public final class SettingsProvider {
 
     /**
      * Initializes specified class with default values if any. A {@linkplain org.xblackcat.sjpu.settings.SettingsException} will be thrown
-     * if the specified interface has methods without {@linkplain org.xblackcat.sjpu.settings.DefaultValue} annotation
+     * if the specified interface has methods without {@linkplain org.xblackcat.sjpu.settings.ann.DefaultValue} annotation
      *
      * @param clazz target interface class for holding settings.
      * @param <T>   target interface for holding settings.
@@ -299,18 +303,31 @@ public final class SettingsProvider {
             );
         }
 
-        return loadValues(clazz, Collections.<String, String>emptyMap());
+        return loadValues(clazz, Collections.<String, String>emptyMap(), null);
     }
 
-    static <T> T loadValues(Class<T> clazz, Map<String, String> properties) throws SettingsException {
+    static <T> T loadValues(
+            Class<T> clazz,
+            Map<String, String> properties,
+            String prefixName
+    ) throws SettingsException {
         if (log.isDebugEnabled()) {
             log.debug("Load defaults for class " + clazz.getName());
         }
 
-        final String prefixName;
         final ClassPool pool = new ClassPool(true);
         pool.appendClassPath(new ClassClassPath(SettingsProvider.class));
         pool.appendClassPath(new ClassClassPath(clazz));
+
+        @SuppressWarnings("unchecked") final Constructor<T> c = ClassUtils.getSettingsConstructor(clazz, pool);
+
+        List<Object> values = ClassUtils.buildConstructorParameters(pool, clazz, properties, prefixName);
+
+        return ClassUtils.initialize(c, values);
+    }
+
+    private static <T> String getPrefix(Class<T> clazz) {
+        final String prefixName;
         final Prefix prefixAnn = clazz.getAnnotation(Prefix.class);
         if (prefixAnn != null) {
             prefixName = prefixAnn.value();
@@ -321,12 +338,7 @@ public final class SettingsProvider {
         } else {
             prefixName = "";
         }
-
-        @SuppressWarnings("unchecked") final Constructor<T> c = ClassUtils.getSettingsConstructor(clazz, pool);
-
-        List<Object> values = ClassUtils.buildConstructorParameters(pool, clazz, properties, prefixName);
-
-        return ClassUtils.initialize(c, values);
+        return prefixName;
     }
 
     private static InputStream getInputStream(String propertiesFile) throws IOException {

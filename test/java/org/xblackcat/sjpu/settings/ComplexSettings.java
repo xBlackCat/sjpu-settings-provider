@@ -1,5 +1,10 @@
 package org.xblackcat.sjpu.settings;
 
+import org.xblackcat.sjpu.settings.ann.ListOf;
+import org.xblackcat.sjpu.settings.ann.MapOf;
+import org.xblackcat.sjpu.settings.ann.SetOf;
+import org.xblackcat.sjpu.settings.ann.SettingsSource;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
