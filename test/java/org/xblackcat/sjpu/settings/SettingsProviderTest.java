@@ -2,7 +2,6 @@ package org.xblackcat.sjpu.settings;
 
 import org.junit.Assert;
 import org.junit.Test;
-import org.xblackcat.sjpu.settings.config.AConfig;
 import org.xblackcat.sjpu.settings.config.ClassUtils;
 
 import java.io.IOException;
@@ -137,15 +136,7 @@ public class SettingsProviderTest {
 
     @Test
     public void invalidComplexSettings() throws IOException {
-        IConfig conf = new AConfig() {
-            @Override
-            protected Map<String, String> loadProperties() throws IOException, SettingsException {
-                final Map<String, String> properties = new HashMap<>();
-                properties.put("not.annotated", "true");
-                properties.put("wrong.annotated", "true");
-                return properties;
-            }
-        };
+        IConfig conf = new FakeConfig();
         try {
             conf.get(InvalidComplexSettings1.class);
             Assert.fail("Exception expected");
@@ -175,4 +166,5 @@ public class SettingsProviderTest {
             Assert.assertTrue(true);
         }
     }
+
 }
