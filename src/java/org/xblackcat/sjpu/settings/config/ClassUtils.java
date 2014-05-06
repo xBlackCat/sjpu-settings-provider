@@ -212,8 +212,7 @@ public class ClassUtils {
 
             try {
                 CtField f = new CtField(retType, fieldName, settingsClass);
-                f.setModifiers(Modifier.FINAL);
-                f.setModifiers(Modifier.PRIVATE);
+                f.setModifiers(Modifier.FINAL | Modifier.PRIVATE);
                 settingsClass.addField(f);
 
                 final CtMethod getter = CtNewMethod.make(
