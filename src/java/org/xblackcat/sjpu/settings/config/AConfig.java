@@ -11,6 +11,7 @@ import org.xblackcat.sjpu.settings.ann.Prefix;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -71,17 +72,17 @@ public abstract class AConfig implements IConfig {
 
             if (loadedProperties == null) {
                 // Values are not loaded
-                if (!ClassUtils.allMethodsHaveDefaults(clazz)) {
-                    if (optional) {
-                        if (log.isTraceEnabled()) {
-                            log.trace(clazz.getName() + " marked as optional");
-                        }
-
-                        // Optional means no exceptions - just return null
-                        return null;
+                if (ClassUtils.allMethodsHaveDefaults(clazz)) {
+                    loadedProperties = Collections.emptyMap(); // Avoid NPE
+                } else if (optional) {
+                    if (log.isTraceEnabled()) {
+                        log.trace(clazz.getName() + " marked as optional");
                     }
 
-                    throw new SettingsException("No values and " + clazz.getName() + " has mandatory properties without default values");
+                    // Optional means no exceptions - just return null
+                    return null;
+                } else {
+                    throw new SettingsException(clazz.getName() + " has mandatory properties without default values");
                 }
             }
         }
