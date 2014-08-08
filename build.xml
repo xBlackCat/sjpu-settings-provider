@@ -64,7 +64,8 @@
 
     <property name="compiler.args" value="${compiler.args}"/>
 
-    <property name="output.dir" value="${basedir}/out"/>
+    <property environment="os"/>
+    <property name="output.dir" value="${os.TEMP}/${ant.project.name}/out"/>
     <property name="temp.dir" value="${output.dir}/tmp"/>
     <property name="mainoutput.dir"
               value="${output.dir}/production/${ant.project.name}"/>
