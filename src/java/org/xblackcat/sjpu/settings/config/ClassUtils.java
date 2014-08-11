@@ -4,6 +4,7 @@ import javassist.*;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.xblackcat.sjpu.settings.NoPropertyException;
 import org.xblackcat.sjpu.settings.SettingsException;
 import org.xblackcat.sjpu.settings.ann.*;
 
@@ -103,39 +104,51 @@ public class ClassUtils {
         for (Method method : clazz.getMethods()) {
             final GroupField groupField = method.getAnnotation(GroupField.class);
 
-            final Object value;
-            if (groupField != null) {
-                value = getGroupFieldValue(pool, groupField.value(), properties, prefixName, method);
-            } else {
-                final Class<?> returnType = method.getReturnType();
-                final String delimiter;
-                Delimiter delimiterAnn = method.getAnnotation(Delimiter.class);
-                if (delimiterAnn == null) {
-                    delimiter = DEFAULT_DELIMITER;
+            try {
+                final Object value;
+                if (groupField != null) {
+                    value = getGroupFieldValue(pool, groupField.value(), properties, prefixName, method);
                 } else {
-                    delimiter = delimiterAnn.value();
+                    final Class<?> returnType = method.getReturnType();
+                    final String delimiter;
+                    Delimiter delimiterAnn = method.getAnnotation(Delimiter.class);
+                    if (delimiterAnn == null) {
+                        delimiter = DEFAULT_DELIMITER;
+                    } else {
+                        delimiter = delimiterAnn.value();
+                    }
+
+                    if (returnType.isArray()) {
+                        value = getArrayFieldValue(properties, prefixName, method, delimiter);
+                    } else if (Collection.class.isAssignableFrom(returnType)) {
+                        value = getCollectionFieldValue(properties, prefixName, method, delimiter);
+                    } else if (Map.class.isAssignableFrom(returnType)) {
+                        value = getMapFieldValue(properties, prefixName, method, delimiter);
+                    } else if (returnType.isInterface()) {
+                        final String propertyName = buildPropertyName(prefixName, method);
+
+                        @SuppressWarnings("unchecked") final Constructor<?> c = getSettingsConstructor(returnType, pool);
+
+                        value = initialize(c, buildConstructorParameters(pool, returnType, properties, propertyName));
+                    } else {
+                        String valueStr = getStringValue(properties, prefixName, method);
+
+                        try {
+                            value = ParserUtils.getToObjectConverter(returnType).parse(valueStr);
+                        } catch (RuntimeException e) {
+                            throw new SettingsException("Can't parse value " + valueStr + " to type " + returnType.getName(), e);
+                        }
+                    }
                 }
 
-                if (returnType.isArray()) {
-                    value = getArrayFieldValue(properties, prefixName, method, delimiter);
-                } else if (Collection.class.isAssignableFrom(returnType)) {
-                    value = getCollectionFieldValue(properties, prefixName, method, delimiter);
-                } else if (Map.class.isAssignableFrom(returnType)) {
-                    value = getMapFieldValue(properties, prefixName, method, delimiter);
-                } else if (returnType.isInterface()) {
-                    final String propertyName = buildPropertyName(prefixName, method);
-
-                    @SuppressWarnings("unchecked") final Constructor<?> c = getSettingsConstructor(returnType, pool);
-
-                    value = initialize(c, buildConstructorParameters(pool, returnType, properties, propertyName));
-                } else {
-                    String valueStr = getStringValue(properties, prefixName, method);
-
-                    value = ParserUtils.getToObjectConverter(method.getReturnType()).parse(valueStr);
+                values.add(value);
+            } catch (NoPropertyException e) {
+                if (method.getAnnotation(Optional.class) == null) {
+                    throw e;
                 }
+                // Optional values could be omitted
+                values.add(null);
             }
-
-            values.add(value);
         }
         return values;
     }
@@ -294,35 +307,28 @@ public class ClassUtils {
 
         if (valueStr == null) {
             // Check for default value
-            final boolean required = m.getAnnotation(Optional.class) == null;
 
-            if (required) {
-                final DefaultValue field = m.getAnnotation(DefaultValue.class);
-
-                if (field == null) {
-                    // Default value is not defined
-                    throw new SettingsException("Property " + propertyName + " is not set for method " + m.getName());
+            final DefaultValue field = m.getAnnotation(DefaultValue.class);
+            final String defValue;
+            if (field == null || "".equals(field.value())) {
+                if (returnType.isPrimitive()) {
+                    throw new SettingsException(
+                            "Default value should be set for primitive type with @SettingField annotation for method " + m.getName()
+                    );
                 }
 
-                final String defValue = field.value();
-                if ("".equals(defValue)) {
-                    throw new SettingsException("Property " + propertyName + " is not set for method " + m.getName());
-                }
-
-                if (log.isTraceEnabled()) {
-                    log.trace("Using default value " + defValue + " for property " + propertyName);
-                }
-
-                valueStr = defValue;
+                // Default value is not defined
+                throw new NoPropertyException(propertyName, m);
+            } else {
+                defValue = field.value();
             }
+
+            if (log.isTraceEnabled()) {
+                log.trace("Using default value " + defValue + " for property " + propertyName);
+            }
+            valueStr = defValue;
         }
 
-        if (returnType.isPrimitive() && (valueStr == null || valueStr.length() == 0)) {
-            throw new SettingsException(
-                    "Default value should be set for primitive type with @SettingField annotation for method " +
-                            m.getName()
-            );
-        }
         return valueStr;
     }
 
