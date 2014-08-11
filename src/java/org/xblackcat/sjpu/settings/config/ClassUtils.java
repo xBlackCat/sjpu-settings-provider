@@ -143,7 +143,7 @@ public class ClassUtils {
 
                 values.add(value);
             } catch (NoPropertyException e) {
-                if (method.getAnnotation(Optional.class) == null) {
+                if (method.getAnnotation(org.xblackcat.sjpu.settings.ann.Optional.class) == null) {
                     throw e;
                 }
                 // Optional values could be omitted
@@ -530,7 +530,7 @@ public class ClassUtils {
             }
         }
 
-        boolean required = method.getAnnotation(Optional.class) == null;
+        boolean required = method.getAnnotation(org.xblackcat.sjpu.settings.ann.Optional.class) == null;
         if (required && !prefixes.contains("")) {
             throw new SettingsException("A default group set is required for method " + method.getName());
         }
