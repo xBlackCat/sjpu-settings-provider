@@ -1,5 +1,6 @@
 package org.xblackcat.sjpu.settings.config;
 
+import javassist.ClassPool;
 import org.apache.commons.lang3.ObjectUtils;
 
 import java.io.IOException;
@@ -16,6 +17,10 @@ import java.util.Properties;
  * @author xBlackCat
  */
 public abstract class AnInputStreamConfig extends AConfig {
+    public AnInputStreamConfig(ClassPool pool) {
+        super(pool);
+    }
+
     protected final Map<String, String> loadPropertiesFromStream(InputStream is) throws IOException {
         final Map<String, String> shadow = new LinkedHashMap<>();
         // Use properties object for loading values only

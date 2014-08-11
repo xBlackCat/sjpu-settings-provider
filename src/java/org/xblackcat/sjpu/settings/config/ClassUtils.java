@@ -157,7 +157,7 @@ public class ClassUtils {
         final String implName = clazz.getName() + "$Impl";
         Class<?> aClass;
         try {
-            aClass = Class.forName(implName);
+            aClass = Class.forName(implName, true, pool.getClassLoader());
         } catch (ClassNotFoundException e) {
             try {
                 CtClass settingsClass = buildSettingsClass(clazz, pool);
@@ -561,6 +561,31 @@ public class ClassUtils {
         } catch (InvocationTargetException e) {
             throw new SettingsException("My class produces an exception :(", e);
         }
+    }
+
+    public static ClassPool getClassPool(ClassPool parent, Class<?> clazz, Class<?>... classes) {
+        ClassPool pool = new ClassPool(parent) {
+            @Override
+            public ClassLoader getClassLoader() {
+                return parent.getClassLoader();
+            }
+        };
+
+        Set<ClassLoader> usedLoaders = new HashSet<>();
+        usedLoaders.add(ClassLoader.getSystemClassLoader());
+        usedLoaders.add(ClassPool.class.getClassLoader());
+
+        if (usedLoaders.add(clazz.getClassLoader())) {
+            pool.appendClassPath(new ClassClassPath(clazz));
+        }
+
+        for (Class<?> c : classes) {
+            if (usedLoaders.add(c.getClassLoader())) {
+                pool.appendClassPath(new ClassClassPath(c));
+            }
+        }
+
+        return pool;
     }
 
     static <T> boolean allMethodsHaveDefaults(Class<T> clazz) {

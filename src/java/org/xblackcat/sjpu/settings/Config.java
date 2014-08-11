@@ -1,10 +1,9 @@
 package org.xblackcat.sjpu.settings;
 
+import javassist.ClassClassPath;
+import javassist.ClassPool;
 import org.xblackcat.sjpu.settings.ann.SettingsSource;
-import org.xblackcat.sjpu.settings.config.DefaultConfig;
-import org.xblackcat.sjpu.settings.config.FileConfig;
-import org.xblackcat.sjpu.settings.config.ResourceConfig;
-import org.xblackcat.sjpu.settings.config.URLConfig;
+import org.xblackcat.sjpu.settings.config.*;
 
 import java.io.File;
 import java.net.URL;
@@ -15,6 +14,8 @@ import java.net.URL;
  * @author xBlackCat
  */
 public final class Config {
+    private final static PoolHolder POOL_HOLDER = new PoolHolder();
+
     private Config() {
     }
 
@@ -22,7 +23,7 @@ public final class Config {
      * Initializes specified class with default values if any. A {@linkplain org.xblackcat.sjpu.settings.SettingsException} will be thrown
      * if the specified interface has methods without {@linkplain org.xblackcat.sjpu.settings.ann.DefaultValue} annotation
      */
-    public static final IConfig Defaults = new DefaultConfig();
+    public static final IConfig Defaults = new DefaultConfig(POOL_HOLDER.pool);
 
     /**
      * Builds a config reader from .properties file specified by {@linkplain java.io.File File} object.
@@ -31,7 +32,7 @@ public final class Config {
      * @return config reader
      */
     public static IConfig use(File file) {
-        return new FileConfig(file);
+        return new FileConfig(POOL_HOLDER.pool, file);
     }
 
     /**
@@ -41,7 +42,7 @@ public final class Config {
      * @return config reader
      */
     public static IConfig use(URL url) {
-        return new URLConfig(url);
+        return new URLConfig(POOL_HOLDER.pool, url);
     }
 
     /**
@@ -51,7 +52,7 @@ public final class Config {
      * @return config reader
      */
     public static IConfig use(String resourceName) {
-        return new ResourceConfig(resourceName);
+        return new ResourceConfig(POOL_HOLDER.pool, resourceName);
     }
 
     /**
@@ -70,7 +71,7 @@ public final class Config {
             );
         }
 
-        return new ResourceConfig(sourceAnn.value());
+        return new ResourceConfig(POOL_HOLDER.pool, sourceAnn.value());
     }
 
     /**
@@ -88,5 +89,21 @@ public final class Config {
      */
     public static <T> T get(Class<T> clazz) throws SettingsException {
         return use(clazz).get(clazz);
+    }
+
+    private static final class PoolHolder {
+        private final ClassPool pool;
+        private final ClassLoader classLoader = new ClassLoader(Config.class.getClassLoader()) {
+        };
+
+        private PoolHolder() {
+            pool = new ClassPool(true) {
+                @Override
+                public ClassLoader getClassLoader() {
+                    return classLoader;
+                }
+            };
+            pool.appendClassPath(new ClassClassPath(AConfig.class));
+        }
     }
 }

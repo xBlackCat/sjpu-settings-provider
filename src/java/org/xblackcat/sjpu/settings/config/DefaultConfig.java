@@ -1,5 +1,7 @@
 package org.xblackcat.sjpu.settings.config;
 
+import javassist.ClassPool;
+
 import java.io.IOException;
 import java.util.Map;
 
@@ -9,7 +11,8 @@ import java.util.Map;
  * @author xBlackCat
  */
 public class DefaultConfig extends AConfig {
-    public DefaultConfig() {
+    public DefaultConfig(ClassPool pool) {
+        super(pool);
     }
 
     @Override

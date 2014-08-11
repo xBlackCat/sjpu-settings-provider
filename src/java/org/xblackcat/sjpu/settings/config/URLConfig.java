@@ -1,5 +1,7 @@
 package org.xblackcat.sjpu.settings.config;
 
+import javassist.ClassPool;
+
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,7 +16,8 @@ import java.util.Map;
 public class URLConfig extends AnInputStreamConfig {
     private final URL url;
 
-    public URLConfig(URL url) {
+    public URLConfig(ClassPool pool, URL url) {
+        super(pool);
         this.url = url;
     }
 

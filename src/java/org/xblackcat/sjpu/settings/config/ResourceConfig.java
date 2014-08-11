@@ -1,5 +1,6 @@
 package org.xblackcat.sjpu.settings.config;
 
+import javassist.ClassPool;
 import org.xblackcat.sjpu.settings.SettingsException;
 
 import java.io.IOException;
@@ -14,7 +15,8 @@ import java.util.Map;
 public class ResourceConfig extends AnInputStreamConfig {
     private final String resourceName;
 
-    public ResourceConfig(String resourceName) {
+    public ResourceConfig(ClassPool pool, String resourceName) {
+        super(pool);
         this.resourceName = resourceName;
     }
 

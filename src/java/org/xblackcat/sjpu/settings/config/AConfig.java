@@ -1,6 +1,5 @@
 package org.xblackcat.sjpu.settings.config;
 
-import javassist.ClassClassPath;
 import javassist.ClassPool;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -24,6 +23,11 @@ public abstract class AConfig implements IConfig {
     protected final Log log = LogFactory.getLog(getClass());
 
     private Map<String, String> loadedProperties;
+    private final ClassPool pool;
+
+    protected AConfig(ClassPool pool) {
+        this.pool = pool;
+    }
 
     static <T> String getPrefix(Class<T> clazz) {
         final String prefixName;
@@ -57,9 +61,7 @@ public abstract class AConfig implements IConfig {
             log.debug("Load defaults for class " + clazz.getName());
         }
 
-        final ClassPool pool = new ClassPool(true);
-        pool.appendClassPath(new ClassClassPath(AConfig.class));
-        pool.appendClassPath(new ClassClassPath(clazz));
+        ClassPool pool = ClassUtils.getClassPool(this.pool, clazz);
 
         @SuppressWarnings("unchecked") final Constructor<T> c = ClassUtils.getSettingsConstructor(clazz, pool);
 

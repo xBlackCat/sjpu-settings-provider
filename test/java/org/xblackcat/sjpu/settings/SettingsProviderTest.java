@@ -1,5 +1,6 @@
 package org.xblackcat.sjpu.settings;
 
+import javassist.ClassPool;
 import org.junit.Assert;
 import org.junit.Test;
 import org.xblackcat.sjpu.settings.config.ClassUtils;
@@ -119,7 +120,7 @@ public class SettingsProviderTest {
                 settings.getNumberSet()
         );
 
-        Map<Numbers, String> map1 = new EnumMap<>(Numbers.class);
+        Map<Numbers, String> map1 = new EnumMap<Numbers, String>(Numbers.class);
         map1.put(Numbers.One, "Test-one");
         map1.put(Numbers.Two, "Test-two");
         map1.put(Numbers.Nine, "Test-9");
@@ -136,7 +137,7 @@ public class SettingsProviderTest {
 
     @Test
     public void invalidComplexSettings() throws IOException {
-        IConfig conf = new FakeConfig();
+        IConfig conf = new FakeConfig(new ClassPool(true));
         try {
             conf.get(InvalidComplexSettings1.class);
             Assert.fail("Exception expected");

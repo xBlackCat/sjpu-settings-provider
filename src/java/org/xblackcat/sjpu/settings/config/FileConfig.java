@@ -1,5 +1,7 @@
 package org.xblackcat.sjpu.settings.config;
 
+import javassist.ClassPool;
+
 import java.io.*;
 import java.util.Map;
 
@@ -11,7 +13,8 @@ import java.util.Map;
 public class FileConfig extends AnInputStreamConfig {
     private final File file;
 
-    public FileConfig(File file) {
+    public FileConfig(ClassPool pool, File file) {
+        super(pool);
         this.file = file;
     }
 

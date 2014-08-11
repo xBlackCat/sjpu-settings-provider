@@ -1,5 +1,6 @@
 package org.xblackcat.sjpu.settings;
 
+import javassist.ClassPool;
 import org.xblackcat.sjpu.settings.config.AConfig;
 
 import java.io.IOException;
@@ -12,6 +13,10 @@ import java.util.Map;
 * @author xBlackCat
 */
 class FakeConfig extends AConfig {
+    FakeConfig(ClassPool pool) {
+        super(pool);
+    }
+
     @Override
     protected Map<String, String> loadProperties() throws IOException, SettingsException {
         final Map<String, String> properties = new HashMap<>();
