@@ -164,7 +164,8 @@
             <batchtest todir="${basedir}/report">
                 <formatter type="xml"/>
                 <fileset dir="${testoutput.dir}">
-                    <include name="**/*Test*"/>
+                    <include name="**/*Test.*"/>
+                    <exclude name="**/*Test.*$*"/>
                 </fileset>
             </batchtest>
         </junit>
@@ -203,9 +204,10 @@
         <property name="artifact.output" value="${basedir}/dist"/>
         <mkdir dir="${artifacts.temp.dir}"/>
         <property name="jar.name" value="${ant.project.name}-${lib.version}.jar"/>
+        <property name="bin-zip.name" value="${ant.project.name}-${lib.version}-bin.zip"/>
         <property name="src-zip.name" value="${ant.project.name}-${lib.version}-src.zip"/>
         <property name="temp.jar.path.jar" value="${artifacts.temp.dir}/${jar.name}"/>
-        <property name="temp.zip.path.zip" value="${artifacts.temp.dir}/${src-zip.name}"/>
+        <property name="temp.zip.path.zip" value="${artifacts.temp.dir}/tmp.zip"/>
     </target>
 
     <target name="clean.artifact.dist.zip" description="clean dist.zip artifact output">
@@ -222,7 +224,7 @@
         <copy file="${temp.jar.path.jar}" tofile="${artifact.temp.output}/${jar.name}"/>
     </target>
 
-    <target name="build.src" depends="init.artifacts, compile.module"
+    <target name="build.src" depends="init.artifacts"
             description="Build &apos;${ant.project.name}&apos; sources artifact">
         <property name="artifact.temp.output" value="${artifacts.temp.dir}/${ant.project.name}"/>
         <mkdir dir="${artifact.temp.output}"/>
@@ -238,8 +240,22 @@
         <copy file="${temp.zip.path.zip}" tofile="${artifact.temp.output}/${src-zip.name}"/>
     </target>
 
+    <target name="build.dist" depends="init.artifacts, build.jar"
+            description="Build &apos;${ant.project.name}&apos; sources artifact">
+        <property name="artifact.temp.output" value="${artifacts.temp.dir}/${ant.project.name}"/>
+        <mkdir dir="${artifact.temp.output}"/>
+        <zip destfile="${temp.zip.path.zip}" duplicate="preserve">
+            <zipfileset file="${artifact.temp.output}/${jar.name}"/>
+            <zipfileset dir="${basedir}/lib" prefix="dep">
+                <exclude name="junit-*.jar"/>
+                <exclude name="hamcrest-core-*.jar"/>
+            </zipfileset>
+        </zip>
+        <copy file="${temp.zip.path.zip}" tofile="${artifact.temp.output}/${bin-zip.name}"/>
+    </target>
+
     <target name="build.all.artifacts" description="Build all artifacts"
-            depends="build.jar, build.src">
+            depends="build.jar, build.src, build.dist">
         <mkdir dir="${artifact.output}"/>
         <copy todir="${artifact.output}">
             <fileset dir="${artifact.temp.output}"/>
