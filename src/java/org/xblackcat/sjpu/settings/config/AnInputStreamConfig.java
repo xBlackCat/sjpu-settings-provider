@@ -21,7 +21,7 @@ public abstract class AnInputStreamConfig extends AConfig {
         super(pool);
     }
 
-    protected final Map<String, String> loadPropertiesFromStream(InputStream is) throws IOException {
+    protected final IValueGetter loadPropertiesFromStream(InputStream is) throws IOException {
         final Map<String, String> shadow = new LinkedHashMap<>();
         // Use properties object for loading values only
         @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
@@ -33,6 +33,6 @@ public abstract class AnInputStreamConfig extends AConfig {
         };
         properties.load(new InputStreamReader(is, StandardCharsets.UTF_8));
 
-        return shadow;
+        return new MapWrapper(shadow);
     }
 }

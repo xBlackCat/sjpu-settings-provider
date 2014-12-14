@@ -1,8 +1,11 @@
 package org.xblackcat.sjpu.settings;
 
 import javassist.ClassPool;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.junit.Assert;
 import org.junit.Test;
+import org.xblackcat.sjpu.settings.ann.Optional;
+import org.xblackcat.sjpu.settings.config.AConfig;
 import org.xblackcat.sjpu.settings.config.ClassUtils;
 
 import java.io.IOException;
@@ -17,6 +20,39 @@ import java.util.*;
  * @author xBlackCat
  */
 public class SettingsProviderTest {
+//    @Test
+    public void showJvm() throws SettingsException {
+        final Jvm jvm = Config.anyOf(Config.useEnv(), Config.useJvm()).get(Jvm.class);
+        System.out.println("JavaVersion: " + jvm.getJavaVersion());
+        System.out.println("JavaVendor: " + jvm.getJavaVendor());
+        System.out.println("JavaVendorUrl: " + jvm.getJavaVendorUrl());
+        System.out.println("JavaHome: " + jvm.getJavaHome());
+        System.out.println("JavaVmSpecificationVersion: " + jvm.getJavaVmSpecificationVersion());
+        System.out.println("JavaVmSpecificationVendor: " + jvm.getJavaVmSpecificationVendor());
+        System.out.println("JavaVmSpecificationName: " + jvm.getJavaVmSpecificationName());
+        System.out.println("JavaVmVersion: " + jvm.getJavaVmVersion());
+        System.out.println("JavaVmVendor: " + jvm.getJavaVmVendor());
+        System.out.println("JavaVmName: " + jvm.getJavaVmName());
+        System.out.println("JavaSpecificationVersion: " + jvm.getJavaSpecificationVersion());
+        System.out.println("JavaSpecificationVendor: " + jvm.getJavaSpecificationVendor());
+        System.out.println("JavaSpecificationName: " + jvm.getJavaSpecificationName());
+        System.out.println("JavaClassVersion: " + jvm.getJavaClassVersion());
+        System.out.println("JavaClassPath: " + jvm.getJavaClassPath());
+        System.out.println("JavaLibraryPath: " + jvm.getJavaLibraryPath());
+        System.out.println("JavaIoTmpdir: " + jvm.getJavaIoTmpdir());
+        System.out.println("JavaCompiler: " + jvm.getJavaCompiler());
+        System.out.println("JavaExtDirs: " + jvm.getJavaExtDirs());
+        System.out.println("OsName: " + jvm.getOsName());
+        System.out.println("OsArch: " + jvm.getOsArch());
+        System.out.println("OsVersion: " + jvm.getOsVersion());
+        System.out.println("FileSeparator: " + jvm.getFileSeparator());
+        System.out.println("PathSeparator: " + jvm.getPathSeparator());
+        System.out.println("LineSeparator: " + StringEscapeUtils.escapeJava(jvm.getLineSeparator()));
+        System.out.println("UserName: " + jvm.getUserName());
+        System.out.println("UserHome: " + jvm.getUserHome());
+        System.out.println("UserDir: " + jvm.getUserDir());
+    }
+
     @Test
     public void generatePropertyNames() {
         final Method[] methods = Settings.class.getMethods();
@@ -89,7 +125,7 @@ public class SettingsProviderTest {
         Assert.assertEquals("Test", settings.getValue());
         Assert.assertEquals("Another", settings.getAnotherValue());
 
-        IConfig conf = Config.use("/source/combined-settings.properties");
+        AConfig conf = Config.use("/source/combined-settings.properties");
         Settings s = conf.get(Settings.class);
         Settings2 s2 = conf.get(Settings2.class);
 
@@ -120,7 +156,7 @@ public class SettingsProviderTest {
                 settings.getNumberSet()
         );
 
-        Map<Numbers, String> map1 = new EnumMap<Numbers, String>(Numbers.class);
+        Map<Numbers, String> map1 = new EnumMap<>(Numbers.class);
         map1.put(Numbers.One, "Test-one");
         map1.put(Numbers.Two, "Test-two");
         map1.put(Numbers.Nine, "Test-9");
@@ -137,7 +173,7 @@ public class SettingsProviderTest {
 
     @Test
     public void invalidComplexSettings() throws IOException {
-        IConfig conf = new FakeConfig(new ClassPool(true));
+        AConfig conf = new FakeConfig(new ClassPool(true));
         try {
             conf.get(InvalidComplexSettings1.class);
             Assert.fail("Exception expected");
@@ -168,4 +204,89 @@ public class SettingsProviderTest {
         }
     }
 
+    public static interface Jvm {
+        @Optional
+        String getJavaVersion();
+
+        @Optional
+        String getJavaVendor();
+
+        @Optional
+        String getJavaVendorUrl();
+
+        @Optional
+        String getJavaHome();
+
+        @Optional
+        String getJavaVmSpecificationVersion();
+
+        @Optional
+        String getJavaVmSpecificationVendor();
+
+        @Optional
+        String getJavaVmSpecificationName();
+
+        @Optional
+        String getJavaVmVersion();
+
+        @Optional
+        String getJavaVmVendor();
+
+        @Optional
+        String getJavaVmName();
+
+        @Optional
+        String getJavaSpecificationVersion();
+
+        @Optional
+        String getJavaSpecificationVendor();
+
+        @Optional
+        String getJavaSpecificationName();
+
+        @Optional
+        String getJavaClassVersion();
+
+        @Optional
+        String getJavaClassPath();
+
+        @Optional
+        String getJavaLibraryPath();
+
+        @Optional
+        String getJavaIoTmpdir();
+
+        @Optional
+        String getJavaCompiler();
+
+        @Optional
+        String getJavaExtDirs();
+
+        @Optional
+        String getOsName();
+
+        @Optional
+        String getOsArch();
+
+        @Optional
+        String getOsVersion();
+
+        @Optional
+        String getFileSeparator();
+
+        @Optional
+        String getPathSeparator();
+
+        @Optional
+        String getLineSeparator();
+
+        @Optional
+        String getUserName();
+
+        @Optional
+        String getUserHome();
+
+        @Optional
+        String getUserDir();
+    }
 }

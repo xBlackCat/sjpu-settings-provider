@@ -23,7 +23,7 @@ public final class Config {
      * Initializes specified class with default values if any. A {@linkplain org.xblackcat.sjpu.settings.SettingsException} will be thrown
      * if the specified interface has methods without {@linkplain org.xblackcat.sjpu.settings.ann.DefaultValue} annotation
      */
-    public static final IConfig Defaults = new DefaultConfig(POOL_HOLDER.pool);
+    public static final AConfig Defaults = new DefaultConfig(POOL_HOLDER.pool);
 
     /**
      * Builds a config reader from .properties file specified by {@linkplain java.io.File File} object.
@@ -31,7 +31,7 @@ public final class Config {
      * @param file .properties file.
      * @return config reader
      */
-    public static IConfig use(File file) {
+    public static AConfig use(File file) {
         return new FileConfig(POOL_HOLDER.pool, file);
     }
 
@@ -41,7 +41,7 @@ public final class Config {
      * @param url url to .properties file.
      * @return config reader
      */
-    public static IConfig use(URL url) {
+    public static AConfig use(URL url) {
         return new URLConfig(POOL_HOLDER.pool, url);
     }
 
@@ -51,8 +51,20 @@ public final class Config {
      * @param resourceName resource name.
      * @return config reader
      */
-    public static IConfig use(String resourceName) {
+    public static AConfig use(String resourceName) {
         return new ResourceConfig(POOL_HOLDER.pool, resourceName);
+    }
+
+    public static AConfig useEnv() {
+        return new EnvConfig(Config.POOL_HOLDER.pool);
+    }
+
+    public static AConfig useJvm() {
+        return new JvmConfig(Config.POOL_HOLDER.pool);
+    }
+
+    public static AConfig anyOf(AConfig... sources) {
+        return new MultiSourceConfig(POOL_HOLDER.pool, sources);
     }
 
     /**
@@ -61,7 +73,7 @@ public final class Config {
      * @param clazz class annotated with {@linkplain org.xblackcat.sjpu.settings.ann.SettingsSource @SettingsSource} annotation.
      * @return config reader
      */
-    public static IConfig use(Class<?> clazz) throws SettingsException {
+    public static AConfig use(Class<?> clazz) throws SettingsException {
         final SettingsSource sourceAnn = clazz.getAnnotation(SettingsSource.class);
 
         if (sourceAnn == null) {
@@ -106,4 +118,5 @@ public final class Config {
             pool.appendClassPath(new ClassClassPath(AConfig.class));
         }
     }
+
 }

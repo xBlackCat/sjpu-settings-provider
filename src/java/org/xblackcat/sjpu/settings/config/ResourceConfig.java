@@ -5,7 +5,6 @@ import org.xblackcat.sjpu.settings.SettingsException;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Map;
 
 /**
  * 14.04.2014 15:07
@@ -30,7 +29,7 @@ public class ResourceConfig extends AnInputStreamConfig {
     }
 
     @Override
-    protected Map<String, String> loadProperties() throws IOException, SettingsException {
+    protected IValueGetter loadProperties() throws IOException, SettingsException {
         if (resourceName == null) {
             return null;
         }

@@ -3,7 +3,6 @@ package org.xblackcat.sjpu.settings.config;
 import javassist.ClassPool;
 
 import java.io.*;
-import java.util.Map;
 
 /**
  * 14.04.2014 15:07
@@ -19,7 +18,7 @@ public class FileConfig extends AnInputStreamConfig {
     }
 
     @Override
-    protected Map<String, String> loadProperties() throws IOException {
+    protected IValueGetter loadProperties() throws IOException {
         if (file == null) {
             return null;
         }

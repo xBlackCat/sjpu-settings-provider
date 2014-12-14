@@ -3,7 +3,6 @@ package org.xblackcat.sjpu.settings.config;
 import javassist.ClassPool;
 
 import java.io.IOException;
-import java.util.Map;
 
 /**
  * 14.04.2014 15:04
@@ -16,7 +15,7 @@ public class DefaultConfig extends AConfig {
     }
 
     @Override
-    protected Map<String, String> loadProperties() throws IOException {
+    protected IValueGetter loadProperties() throws IOException {
         return null;
     }
 }

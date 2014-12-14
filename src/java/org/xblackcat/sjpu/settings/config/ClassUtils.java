@@ -96,7 +96,7 @@ public class ClassUtils {
     static <T> List<Object> buildConstructorParameters(
             ClassPool pool,
             Class<T> clazz,
-            Map<String, String> properties,
+            IValueGetter properties,
             String prefixName
     ) throws SettingsException {
         List<Object> values = new ArrayList<>();
@@ -295,7 +295,7 @@ public class ClassUtils {
         }
     }
 
-    static String getStringValue(Map<String, String> properties, String prefixName, Method m) throws SettingsException {
+    static String getStringValue(IValueGetter properties, String prefixName, Method m) throws SettingsException {
         final Class<?> returnType = m.getReturnType();
 
         final String propertyName = buildPropertyName(prefixName, m);
@@ -334,7 +334,7 @@ public class ClassUtils {
 
     @SuppressWarnings("unchecked")
     private static Object getArrayFieldValue(
-            Map<String, String> properties,
+            IValueGetter properties,
             String prefixName,
             Method method,
             String delimiter
@@ -372,7 +372,7 @@ public class ClassUtils {
 
     @SuppressWarnings("unchecked")
     private static Object getCollectionFieldValue(
-            Map<String, String> properties,
+            IValueGetter properties,
             String prefixName,
             Method method,
             String delimiter
@@ -430,7 +430,7 @@ public class ClassUtils {
 
     @SuppressWarnings("unchecked")
     private static Map getMapFieldValue(
-            Map<String, String> properties,
+            IValueGetter properties,
             String prefixName,
             Method method,
             String delimiter
@@ -488,7 +488,7 @@ public class ClassUtils {
     private static <T> Map<String, T> getGroupFieldValue(
             ClassPool pool,
             Class<T> clazz,
-            Map<String, String> properties,
+            IValueGetter properties,
             String prefixName,
             Method method
     ) throws SettingsException {

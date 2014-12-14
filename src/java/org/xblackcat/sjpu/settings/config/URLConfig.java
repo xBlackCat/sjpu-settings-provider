@@ -6,7 +6,6 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.Map;
 
 /**
  * 14.04.2014 15:07
@@ -22,7 +21,7 @@ public class URLConfig extends AnInputStreamConfig {
     }
 
     @Override
-    protected Map<String, String> loadProperties() throws IOException {
+    protected IValueGetter loadProperties() throws IOException {
         if (url == null) {
             return null;
         }
