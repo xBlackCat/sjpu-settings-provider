@@ -12,17 +12,6 @@
     <orderEntry type="module-library">
       <library>
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/javassist.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES>
-          <root url="jar://D:/Libraries/Java/ByteCode/javassist-3.18.0-GA.zip!/javassist-3.18.0-GA/src/main" />
-        </SOURCES>
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library>
-        <CLASSES>
           <root url="jar://$MODULE_DIR$/lib/commons-logging-1.1.1.jar!/" />
         </CLASSES>
         <JAVADOC />
@@ -74,4 +63,3 @@
     </orderEntry>
   </component>
 </module>
-

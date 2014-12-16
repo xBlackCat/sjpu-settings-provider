@@ -13,6 +13,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * 12.02.13 16:40
@@ -134,7 +136,7 @@ public class ClassUtils {
                         String valueStr = getStringValue(properties, prefixName, method);
 
                         try {
-                            value = ParserUtils.getToObjectConverter(returnType).parse(valueStr);
+                            value = ParserUtils.getToObjectConverter(returnType).apply(valueStr);
                         } catch (RuntimeException e) {
                             throw new SettingsException("Can't parse value " + valueStr + " to type " + returnType.getName(), e);
                         }
@@ -407,14 +409,14 @@ public class ClassUtils {
             throw new SettingsException("Neither @ListOf nor @SetOf annotations is set for declaring class of collection element.");
         }
 
-        ParserUtils.ValueParser parser = ParserUtils.getToObjectConverter(targetType);
+        Function<String, Object> parser = ParserUtils.getToObjectConverter(targetType);
 
         for (String valueStr : values) {
             try {
                 if (valueStr == null) {
                     collection.add(null);
                 } else {
-                    collection.add(parser.parse(valueStr));
+                    collection.add(parser.apply(valueStr));
                 }
             } catch (RuntimeException e) {
                 throw new SettingsException("Can't parse value " + valueStr + " to type " + targetType.getName(), e);
@@ -454,8 +456,8 @@ public class ClassUtils {
             throw new SettingsException("@MapOf annotation is not set for declaring target map elements.");
         }
 
-        ParserUtils.ValueParser keyParser = ParserUtils.getToObjectConverter(targetKeyType);
-        ParserUtils.ValueParser valueParser = ParserUtils.getToObjectConverter(mapOf.value());
+        Function<String, Object> keyParser = ParserUtils.getToObjectConverter(targetKeyType);
+        Function<String, Object> valueParser = ParserUtils.getToObjectConverter(mapOf.value());
 
         for (String part : values) {
             String[] parts = StringUtils.splitByWholeSeparator(part, mapOf.splitter(), 2);
@@ -470,12 +472,12 @@ public class ClassUtils {
             }
 
             try {
-                Object key = keyParser.parse(keyString);
+                Object key = keyParser.apply(keyString);
 
                 if (valueString == null) {
                     map.put(key, null);
                 } else {
-                    map.put(key, valueParser.parse(valueString));
+                    map.put(key, valueParser.apply(valueString));
                 }
             } catch (RuntimeException e) {
                 throw new SettingsException("Can't parse value " + valueString + " to type " + targetKeyType.getName(), e);
@@ -501,13 +503,7 @@ public class ClassUtils {
         final String propertyName = buildPropertyName(prefixName, method);
         final String propertyNameDot = propertyName + ".";
 
-        Set<String> propertyNames = new HashSet<>();
-
-        for (String name : properties.keySet()) {
-            if (name.startsWith(propertyNameDot)) {
-                propertyNames.add(name);
-            }
-        }
+        Set<String> propertyNames = properties.keySet().stream().filter(name -> name.startsWith(propertyNameDot)).collect(Collectors.toSet());
 
         // Search for possible prefixes
         Set<String> prefixes = new HashSet<>();
