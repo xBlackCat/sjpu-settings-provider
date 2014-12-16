@@ -123,8 +123,8 @@
                debug="${compiler.debug}"
                nowarn="${compiler.generate.no.warnings}"
                memorymaximumsize="${compiler.max.memory}"
-               source="1.7"
-               target="1.7"
+               source="1.8"
+               target="1.8"
                fork="true">
             <compilerarg line="${compiler.args}"/>
             <classpath refid="classpath"/>
@@ -141,8 +141,8 @@
                debug="${compiler.debug}"
                nowarn="${compiler.generate.no.warnings}"
                memorymaximumsize="${compiler.max.memory}"
-               source="1.7"
-               target="1.7"
+               source="1.8"
+               target="1.8"
                fork="true">
             <compilerarg line="${compiler.args}"/>
             <classpath refid="test.classpath"/>
