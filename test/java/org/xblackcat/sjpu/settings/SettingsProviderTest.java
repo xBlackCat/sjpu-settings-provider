@@ -20,7 +20,7 @@ import java.util.*;
  * @author xBlackCat
  */
 public class SettingsProviderTest {
-//    @Test
+    //    @Test
     public void showJvm() throws SettingsException {
         final Jvm jvm = Config.anyOf(Config.useEnv(), Config.useJvm()).get(Jvm.class);
         System.out.println("JavaVersion: " + jvm.getJavaVersion());
@@ -141,6 +141,7 @@ public class SettingsProviderTest {
         ComplexSettings settings = Config.get(ComplexSettings.class);
 
         Assert.assertArrayEquals(new int[]{1, 10, 20, 50, 500, 1000}, settings.getIds());
+        Assert.assertTrue(Arrays.equals(new boolean[]{true, true, false, true, false, true, false, false}, settings.getFlags()));
         Assert.assertArrayEquals(new Numbers[]{Numbers.One, Numbers.Three, Numbers.Seven}, settings.getValues());
 
         Assert.assertEquals(
@@ -176,6 +177,7 @@ public class SettingsProviderTest {
         ComplexSettingsAuto settings = Config.get(ComplexSettingsAuto.class);
 
         Assert.assertArrayEquals(new int[]{1, 10, 20, 50, 500, 1000}, settings.getIds());
+        Assert.assertTrue(Arrays.equals(new boolean[]{true, true, false, true, false, true, false, false}, settings.getFlags()));
         Assert.assertArrayEquals(new Numbers[]{Numbers.One, Numbers.Three, Numbers.Seven}, settings.getValues());
 
         Assert.assertEquals(
@@ -202,8 +204,8 @@ public class SettingsProviderTest {
         map2.put(4l, Numbers.Four);
         map2.put(5l, Numbers.Five);
 
-//        Assert.assertEquals(map1, settings.getNumberMap());
-//        Assert.assertEquals(map2, settings.getOtherNumberMap());
+        Assert.assertEquals(map1, settings.getNumberMap());
+        Assert.assertEquals(map2, settings.getOtherNumberMap());
     }
 
     @Test
@@ -232,6 +234,34 @@ public class SettingsProviderTest {
         }
         try {
             conf.get(InvalidComplexSettings4.class);
+            Assert.fail("Exception expected");
+        } catch (SettingsException e) {
+            System.out.println(e.getMessage());
+            Assert.assertTrue(true);
+        }
+        try {
+            conf.get(InvalidComplexSettings5.class);
+            Assert.fail("Exception expected");
+        } catch (SettingsException e) {
+            System.out.println(e.getMessage());
+            Assert.assertTrue(true);
+        }
+        try {
+            conf.get(InvalidComplexSettings6.class);
+            Assert.fail("Exception expected");
+        } catch (SettingsException e) {
+            System.out.println(e.getMessage());
+            Assert.assertTrue(true);
+        }
+        try {
+            conf.get(InvalidComplexSettings7.class);
+            Assert.fail("Exception expected");
+        } catch (SettingsException e) {
+            System.out.println(e.getMessage());
+            Assert.assertTrue(true);
+        }
+        try {
+            conf.get(InvalidComplexSettings8.class);
             Assert.fail("Exception expected");
         } catch (SettingsException e) {
             System.out.println(e.getMessage());

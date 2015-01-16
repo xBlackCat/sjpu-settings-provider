@@ -24,6 +24,7 @@ public class ClassUtils {
 
     public static final CtClass[] EMPTY_LIST = new CtClass[]{};
     private static final String DEFAULT_DELIMITER = ",";
+    private static final String DEFAULT_SPLITTER = ":";
 
     public static <T extends Enum<T>> T searchForEnum(Class<T> clazz, String name) throws IllegalArgumentException {
         try {
@@ -111,12 +112,7 @@ public class ClassUtils {
                 } else {
                     final Class<?> returnType = method.getReturnType();
                     final String delimiter;
-                    Delimiter delimiterAnn = method.getAnnotation(Delimiter.class);
-                    if (delimiterAnn == null) {
-                        delimiter = DEFAULT_DELIMITER;
-                    } else {
-                        delimiter = delimiterAnn.value();
-                    }
+                    delimiter = getDelimiter(method);
 
                     if (returnType.isArray()) {
                         value = getArrayFieldValue(properties, prefixName, method, delimiter);
@@ -151,6 +147,26 @@ public class ClassUtils {
             }
         }
         return values;
+    }
+
+    private static String getDelimiter(Method method) {
+        Delimiter delimiterAnn = method.getAnnotation(Delimiter.class);
+
+        if (delimiterAnn == null) {
+            return DEFAULT_DELIMITER;
+        } else {
+            return delimiterAnn.value();
+        }
+    }
+
+    private static String getSplitter(Method method) {
+        Splitter splitterAnn = method.getAnnotation(Splitter.class);
+
+        if (splitterAnn == null) {
+            return DEFAULT_SPLITTER;
+        } else {
+            return splitterAnn.value();
+        }
     }
 
     static synchronized <T> Constructor<T> getSettingsConstructor(Class<T> clazz, ClassPool pool) throws SettingsException {
@@ -371,18 +387,23 @@ public class ClassUtils {
     }
 
     private static Class<?> detectTypeArgClass(Type type) {
-        if (!(type instanceof ParameterizedType)) {
-            return null;
+        return detectTypeArgsClass(type, 1)[0];
+    }
+
+    private static Class<?>[] detectTypeArgsClass(Type type, int amount) {
+        Class<?>[] result = new Class[amount];
+        if ((type instanceof ParameterizedType)) {
+            final Type[] typeArguments = ((ParameterizedType) type).getActualTypeArguments();
+            if (typeArguments.length == amount) {
+                while (amount-- > 0) {
+                    final Type argument = typeArguments[amount];
+                    if (argument instanceof Class) {
+                        result[amount] = (Class<?>) argument;
+                    }
+                }
+            }
         }
-        final Type[] typeArguments = ((ParameterizedType) type).getActualTypeArguments();
-        if (typeArguments.length != 1) {
-            return null;
-        }
-        final Type argument = typeArguments[0];
-        if (!(argument instanceof Class)) {
-            return null;
-        }
-        return (Class<?>) argument;
+        return result;
     }
 
     @SuppressWarnings("unchecked")
@@ -409,7 +430,7 @@ public class ClassUtils {
 
         String[] values = StringUtils.splitByWholeSeparator(arrayString, delimiter);
 
-        Class<?> targetType;
+        final Class<?> targetType;
         CollectionOf collectionOf = method.getAnnotation(CollectionOf.class);
         if (collectionOf != null) {
             targetType = collectionOf.value();
@@ -488,26 +509,87 @@ public class ClassUtils {
 
         String[] values = StringUtils.splitByWholeSeparator(arrayString, delimiter);
 
-        final Class<?> targetKeyType;
-        final Map map;
-        MapOf mapOf = method.getAnnotation(MapOf.class);
-        if (mapOf != null) {
-            targetKeyType = mapOf.key();
-
-            if (Enum.class.isAssignableFrom(targetKeyType)) {
-                map = new EnumMap(targetKeyType);
-            } else {
-                map = new LinkedHashMap(values.length);
+        final Class<?> returnRawType;
+        final Class<?> proposalKeyClass;
+        final Class<?> proposalValueClass;
+        if (method.getGenericReturnType() instanceof ParameterizedType) {
+            final ParameterizedType returnType = (ParameterizedType) method.getGenericReturnType();
+            if (!(returnType.getRawType() instanceof Class)) {
+                throw new SettingsException("Raw type is not a class " + returnType + " in method " + method.toString());
             }
+            returnRawType = (Class) returnType.getRawType();
+            Class<?>[] detectTypeArgsClass = detectTypeArgsClass(returnType, 2);
+            proposalKeyClass = detectTypeArgsClass[0];
+            proposalValueClass = detectTypeArgsClass[1];
         } else {
-            throw new SettingsException("@MapOf annotation is not set for declaring target map elements.");
+            returnRawType = (Class<?>) method.getGenericReturnType();
+            proposalKeyClass = null;
+            proposalValueClass = null;
+        }
+
+        if (!Map.class.equals(returnRawType)) {
+            throw new SettingsException("Please, specify general interface for maps as return type for method " + method.toString());
+        }
+
+        final Class<?> targetKeyType;
+        MapKey mapKey = method.getAnnotation(MapKey.class);
+        if (mapKey != null) {
+            targetKeyType = mapKey.value();
+        } else {
+            targetKeyType = proposalKeyClass;
+        }
+
+        if (proposalKeyClass != null) {
+            if (!targetKeyType.isAssignableFrom(proposalKeyClass)) {
+                throw new SettingsException(
+                        "Specified return object " + targetKeyType.getName() + " cannot be casted to " + proposalKeyClass.getName()
+                );
+            }
+        }
+
+        if (targetKeyType == null) {
+            throw new SettingsException(
+                    "Cannot detect key component type of map. Please, use @MapKey annotation for method " + method.toString()
+            );
+        }
+
+        final Class<?> targetValueType;
+        MapValue collectionOf = method.getAnnotation(MapValue.class);
+        if (collectionOf != null) {
+            targetValueType = collectionOf.value();
+        } else {
+            targetValueType = proposalValueClass;
+        }
+
+        if (proposalValueClass != null) {
+            if (!targetValueType.isAssignableFrom(proposalValueClass)) {
+                throw new SettingsException(
+                        "Specified return object " + targetValueType.getName() + " cannot be casted to " + proposalValueClass.getName()
+                );
+            }
+        }
+
+        if (targetValueType == null) {
+            throw new SettingsException(
+                    "Cannot detect value component type of map. Please, use @MapValue annotation for method " + method.toString()
+            );
+        }
+
+
+        final Map map;
+        if (Enum.class.isAssignableFrom(targetKeyType)) {
+            map = new EnumMap(targetKeyType);
+        } else {
+            map = new LinkedHashMap(values.length);
         }
 
         Function<String, Object> keyParser = ParserUtils.getToObjectConverter(targetKeyType);
-        Function<String, Object> valueParser = ParserUtils.getToObjectConverter(mapOf.value());
+        Function<String, Object> valueParser = ParserUtils.getToObjectConverter(targetValueType);
+
+        final String splitter = getSplitter(method);
 
         for (String part : values) {
-            String[] parts = StringUtils.splitByWholeSeparator(part, mapOf.splitter(), 2);
+            String[] parts = StringUtils.splitByWholeSeparator(part, splitter, 2);
             final String keyString;
             final String valueString;
             if (parts.length < 2) {

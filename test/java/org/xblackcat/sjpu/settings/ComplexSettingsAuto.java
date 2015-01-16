@@ -1,8 +1,10 @@
 package org.xblackcat.sjpu.settings;
 
 import org.xblackcat.sjpu.settings.ann.SettingsSource;
+import org.xblackcat.sjpu.settings.ann.Splitter;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -22,7 +24,8 @@ public interface ComplexSettingsAuto {
 
     Set<Numbers> getNumberSet();
 
-//    Map<Numbers, String> getNumberMap();
+    Map<Numbers, String> getNumberMap();
 
-//    Map<Long, Numbers> getOtherNumberMap();
+    @Splitter("=>")
+    Map<Long, Numbers> getOtherNumberMap();
 }
