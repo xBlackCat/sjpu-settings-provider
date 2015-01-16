@@ -172,6 +172,41 @@ public class SettingsProviderTest {
     }
 
     @Test
+    public void complexSettingsAuto() throws SettingsException, IOException {
+        ComplexSettingsAuto settings = Config.get(ComplexSettingsAuto.class);
+
+        Assert.assertArrayEquals(new int[]{1, 10, 20, 50, 500, 1000}, settings.getIds());
+        Assert.assertArrayEquals(new Numbers[]{Numbers.One, Numbers.Three, Numbers.Seven}, settings.getValues());
+
+        Assert.assertEquals(
+                Arrays.asList(Numbers.One, Numbers.Three, Numbers.Seven, Numbers.One, Numbers.Three, Numbers.Seven),
+                settings.getNumberList()
+        );
+        Assert.assertEquals(
+                new HashSet<>(Arrays.asList(Numbers.One, Numbers.Three, Numbers.Seven)),
+                settings.getNumberSet()
+        );
+        Assert.assertEquals(
+                EnumSet.of(Numbers.One, Numbers.Three, Numbers.Seven),
+                settings.getNumberSet()
+        );
+
+        Map<Numbers, String> map1 = new EnumMap<>(Numbers.class);
+        map1.put(Numbers.One, "Test-one");
+        map1.put(Numbers.Two, "Test-two");
+        map1.put(Numbers.Nine, "Test-9");
+
+        Map<Long, Numbers> map2 = new HashMap<>();
+        map2.put(2l, Numbers.Two);
+        map2.put(3l, Numbers.Three);
+        map2.put(4l, Numbers.Four);
+        map2.put(5l, Numbers.Five);
+
+//        Assert.assertEquals(map1, settings.getNumberMap());
+//        Assert.assertEquals(map2, settings.getOtherNumberMap());
+    }
+
+    @Test
     public void invalidComplexSettings() throws IOException {
         AConfig conf = new FakeConfig(new ClassPool(true));
         try {

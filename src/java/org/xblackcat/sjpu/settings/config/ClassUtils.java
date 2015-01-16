@@ -1,6 +1,7 @@
 package org.xblackcat.sjpu.settings.config;
 
 import javassist.*;
+import javassist.Modifier;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -8,10 +9,7 @@ import org.xblackcat.sjpu.settings.NoPropertyException;
 import org.xblackcat.sjpu.settings.SettingsException;
 import org.xblackcat.sjpu.settings.ann.*;
 
-import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.lang.reflect.*;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -372,6 +370,21 @@ public class ClassUtils {
         return o;
     }
 
+    private static Class<?> detectTypeArgClass(Type type) {
+        if (!(type instanceof ParameterizedType)) {
+            return null;
+        }
+        final Type[] typeArguments = ((ParameterizedType) type).getActualTypeArguments();
+        if (typeArguments.length != 1) {
+            return null;
+        }
+        final Type argument = typeArguments[0];
+        if (!(argument instanceof Class)) {
+            return null;
+        }
+        return (Class<?>) argument;
+    }
+
     @SuppressWarnings("unchecked")
     private static Object getCollectionFieldValue(
             IValueGetter properties,
@@ -380,33 +393,67 @@ public class ClassUtils {
             String delimiter
     ) throws SettingsException {
         String arrayString = getStringValue(properties, prefixName, method);
-        Class<?> returnType = method.getReturnType();
+        final Class<?> returnRawType;
+        final Class<?> proposalReturnClass;
+        if (method.getGenericReturnType() instanceof ParameterizedType) {
+            final ParameterizedType returnType = (ParameterizedType) method.getGenericReturnType();
+            if (!(returnType.getRawType() instanceof Class)) {
+                throw new SettingsException("Raw type is not a class " + returnType + " in method " + method.toString());
+            }
+            returnRawType = (Class) returnType.getRawType();
+            proposalReturnClass = detectTypeArgClass(returnType);
+        } else {
+            returnRawType = (Class<?>) method.getGenericReturnType();
+            proposalReturnClass = null;
+        }
 
         String[] values = StringUtils.splitByWholeSeparator(arrayString, delimiter);
 
-        final Class<?> targetType;
+        Class<?> targetType;
+        CollectionOf collectionOf = method.getAnnotation(CollectionOf.class);
+        if (collectionOf != null) {
+            targetType = collectionOf.value();
+        } else {
+            targetType = proposalReturnClass;
+        }
+
+        if (proposalReturnClass != null) {
+            if (!targetType.isAssignableFrom(proposalReturnClass)) {
+                throw new SettingsException(
+                        "Specified return object " + targetType.getName() + " cannot be casted to " + proposalReturnClass.getName()
+                );
+            }
+        }
+
+        if (targetType == null) {
+            throw new SettingsException(
+                    "Cannot detect component type of list. Please, use @CollectionOf annotation for method " + method.toString()
+            );
+        }
+
         final Collection collection;
-        ListOf listOf = method.getAnnotation(ListOf.class);
-        SetOf setOf = method.getAnnotation(SetOf.class);
-        if (listOf != null) {
-            if (returnType != List.class) {
-                throw new SettingsException("Annotation @ListOf allowed only for java.util.List return type.");
-            }
-            targetType = listOf.value();
-            collection = new ArrayList<>(values.length);
-        } else if (setOf != null) {
-            if (returnType != Set.class) {
-                throw new SettingsException("Annotation @SetOf allowed only for java.util.Set return type.");
-            }
-            targetType = setOf.value();
+        final boolean isList;
+        if (returnRawType.equals(Set.class)) {
+            isList = false;
 
             if (Enum.class.isAssignableFrom(targetType)) {
-                collection = new LinkedHashSet<>(values.length);
-            } else {
                 collection = EnumSet.noneOf((Class<Enum>) targetType);
+            } else {
+                collection = new LinkedHashSet<>(values.length);
             }
+        } else if (returnRawType.equals(List.class) || returnRawType.equals(List.class)) {
+            isList = true;
+
+            collection = new ArrayList<>(values.length);
         } else {
-            throw new SettingsException("Neither @ListOf nor @SetOf annotations is set for declaring class of collection element.");
+            throw new SettingsException(
+                    "Please, specify container by interface " + Collection.class.getName() + ", " + List.class.getName() + " or "
+                            + Set.class.getName() + " as return type for collections."
+            );
+        }
+
+        if (targetType.isInterface() || java.lang.reflect.Modifier.isAbstract(targetType.getModifiers())) {
+            throw new SettingsException("Only non-abstract classes could be specified as collection elements");
         }
 
         Function<String, Object> parser = ParserUtils.getToObjectConverter(targetType);
@@ -423,7 +470,7 @@ public class ClassUtils {
             }
         }
 
-        if (listOf != null) {
+        if (isList) {
             return Collections.unmodifiableList((List<?>) collection);
         } else {
             return Collections.unmodifiableSet((Set<?>) collection);

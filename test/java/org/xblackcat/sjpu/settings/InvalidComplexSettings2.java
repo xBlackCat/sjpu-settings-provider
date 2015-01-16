@@ -1,6 +1,6 @@
 package org.xblackcat.sjpu.settings;
 
-import org.xblackcat.sjpu.settings.ann.ListOf;
+import org.xblackcat.sjpu.settings.ann.CollectionOf;
 
 import java.util.Collection;
 
@@ -10,6 +10,6 @@ import java.util.Collection;
  * @author xBlackCat
  */
 public interface InvalidComplexSettings2 {
-    @ListOf(String.class)
+    @CollectionOf(String.class)
     Collection<String> wrongAnnotated();
 }

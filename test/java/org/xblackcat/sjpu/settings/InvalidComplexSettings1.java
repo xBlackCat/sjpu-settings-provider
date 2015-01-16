@@ -8,5 +8,5 @@ import java.util.List;
  * @author xBlackCat
  */
 public interface InvalidComplexSettings1 {
-    List<String> notAnnotated();
+    List<CharSequence> notAnnotated();
 }

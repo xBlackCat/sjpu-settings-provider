@@ -6,9 +6,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Set custom separator for {@linkplain ListOf @ListOf}, {@linkplain SetOf @SetOf}
- * and {@linkplain MapOf @MapOf} annotations
- * <p/>
+ * Set custom separator for {@linkplain java.util.List List}, {@linkplain java.util.Set Set}
+ * and {@linkplain java.util.Map Map} return types. Default delimiter if ','
+ * <p>
  * 12.02.13 11:24
  *
  * @author xBlackCat
