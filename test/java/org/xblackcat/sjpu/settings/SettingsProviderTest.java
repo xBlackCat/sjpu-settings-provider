@@ -95,6 +95,12 @@ public class SettingsProviderTest {
             Assert.assertNull(testSettings.getSimpleName());
             Assert.assertNull(testSettings.getNoNumber());
             Assert.assertEquals(Numbers.One, testSettings.getOneDefault());
+            Assert.assertNull(testSettings.getNoNumbers());
+            Assert.assertNotNull(testSettings.getEmptyNumbers());
+            Assert.assertEquals(0, testSettings.getEmptyNumbers().size());
+            Assert.assertNull(testSettings.getNoNumbersMap());
+            Assert.assertNotNull(testSettings.getEmptyNumbersMap());
+            Assert.assertEquals(0, testSettings.getEmptyNumbersMap().size());
         }
 
         // Default value is not set for primitive field

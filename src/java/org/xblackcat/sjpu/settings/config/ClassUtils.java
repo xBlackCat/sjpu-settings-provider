@@ -334,7 +334,7 @@ public class ClassUtils {
                     throw new SettingsException(
                             "Default value should be set for primitive type with @SettingField annotation for method " + m.getName()
                     );
-                } else if (!optional) {
+                } else if (!optional && defValue == null) {
                     // Default value is not defined
                     throw new NoPropertyException(propertyName, m);
                 }
@@ -342,8 +342,8 @@ public class ClassUtils {
                 if (log.isTraceEnabled()) {
                     log.trace("Using default value " + defValue + " for property " + propertyName);
                 }
-                valueStr = defValue;
             }
+            valueStr = defValue;
         }
 
         return valueStr;
@@ -415,6 +415,9 @@ public class ClassUtils {
             String delimiter
     ) throws SettingsException {
         String arrayString = getStringValue(properties, prefixName, method);
+        if (arrayString == null) {
+            return null;
+        }
         final Class<?> returnRawType;
         final Class<?> proposalReturnClass;
         if (method.getGenericReturnType() instanceof ParameterizedType) {
@@ -507,6 +510,9 @@ public class ClassUtils {
             String delimiter
     ) throws SettingsException {
         String arrayString = getStringValue(properties, prefixName, method);
+        if (arrayString == null) {
+            return null;
+        }
 
         String[] values = StringUtils.splitByWholeSeparator(arrayString, delimiter);
 
