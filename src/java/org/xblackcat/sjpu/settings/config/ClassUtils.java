@@ -8,6 +8,7 @@ import org.apache.commons.logging.LogFactory;
 import org.xblackcat.sjpu.settings.NoPropertyException;
 import org.xblackcat.sjpu.settings.SettingsException;
 import org.xblackcat.sjpu.settings.ann.*;
+import org.xblackcat.sjpu.settings.ann.Optional;
 
 import java.lang.reflect.*;
 import java.util.*;
@@ -325,24 +326,24 @@ public class ClassUtils {
             // Check for default value
 
             final DefaultValue field = m.getAnnotation(DefaultValue.class);
-            final String defValue;
-            if (field == null || "".equals(field.value())) {
+
+            final boolean optional = m.isAnnotationPresent(Optional.class);
+            final String defValue = field == null ? null : field.value();
+            if (StringUtils.isEmpty(defValue)) {
                 if (returnType.isPrimitive()) {
                     throw new SettingsException(
                             "Default value should be set for primitive type with @SettingField annotation for method " + m.getName()
                     );
+                } else if (!optional) {
+                    // Default value is not defined
+                    throw new NoPropertyException(propertyName, m);
                 }
-
-                // Default value is not defined
-                throw new NoPropertyException(propertyName, m);
             } else {
-                defValue = field.value();
+                if (log.isTraceEnabled()) {
+                    log.trace("Using default value " + defValue + " for property " + propertyName);
+                }
+                valueStr = defValue;
             }
-
-            if (log.isTraceEnabled()) {
-                log.trace("Using default value " + defValue + " for property " + propertyName);
-            }
-            valueStr = defValue;
         }
 
         return valueStr;

@@ -89,6 +89,14 @@ public class SettingsProviderTest {
             Assert.assertEquals(42, testSettings.getComplexNameWithABBR());
         }
 
+        {
+            final SettingsOptional testSettings = Config.use("/source/settings-blank.properties").get(SettingsOptional.class);
+
+            Assert.assertNull(testSettings.getSimpleName());
+            Assert.assertNull(testSettings.getNoNumber());
+            Assert.assertEquals(Numbers.One, testSettings.getOneDefault());
+        }
+
         // Default value is not set for primitive field
         try {
             Config.use("/source/settings-blank.properties").get(Settings.class);
@@ -269,7 +277,7 @@ public class SettingsProviderTest {
         }
     }
 
-    public static interface Jvm {
+    public interface Jvm {
         @Optional
         String getJavaVersion();
 

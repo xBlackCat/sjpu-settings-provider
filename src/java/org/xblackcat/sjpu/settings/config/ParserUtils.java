@@ -80,7 +80,7 @@ final class ParserUtils {
         } else if (char.class.equals(targetType)) {
             return valueStr -> valueStr.toCharArray()[0];
         } else if (Enum.class.isAssignableFrom(targetType)) {
-            return valueStr -> ClassUtils.searchForEnum((Class<Enum>) targetType, valueStr);
+            return valueStr -> StringUtils.isBlank(valueStr) ? null : ClassUtils.searchForEnum((Class<Enum>) targetType, valueStr);
         } else {
             throw new SettingsException("Unknown type to parse: " + targetType.getName());
         }
