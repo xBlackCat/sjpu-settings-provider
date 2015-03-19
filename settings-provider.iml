@@ -31,7 +31,6 @@
         </SOURCES>
       </library>
     </orderEntry>
-    <orderEntry type="module" module-name="sjpu-commons" />
     <orderEntry type="module-library">
       <library>
         <CLASSES>
