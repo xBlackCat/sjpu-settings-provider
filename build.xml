@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="sjpu-settings-provider" default="all">
+
+
+    <property file="build.properties"/>
+    <!-- Uncomment the following property if no tests compilation is needed -->
+
+    <!--<property name="skip.tests" value="true"/>-->
+
+
+    <!-- Compiler options -->
+
+    <property name="compiler.debug" value="on"/>
+    <property name="compiler.generate.no.warnings" value="off"/>
+    <property name="compiler.args" value=""/>
+    <property name="compiler.max.memory" value="128m"/>
+    <patternset id="ignored.files">
+        <exclude name="**/CVS/**"/>
+        <exclude name="**/SCCS/**"/>
+        <exclude name="**/RCS/**"/>
+        <exclude name="**/rcs/**"/>
+        <exclude name="**/.DS_Store/**"/>
+        <exclude name="**/.svn/**"/>
+        <exclude name="**/vssver.scc/**"/>
+        <exclude name="**/vssver2.scc/**"/>
+        <exclude name="**/.sbas/**"/>
+        <exclude name="**/.IJI.*/**"/>
+        <exclude name="**/.pyc/**"/>
+        <exclude name="**/.pyo/**"/>
+        <exclude name="**/*.pyc/**"/>
+        <exclude name="**/*.pyo/**"/>
+        <exclude name="**/.git/**"/>
+        <exclude name="**/*.hprof/**"/>
+        <exclude name="**/_svn/**"/>
+        <exclude name="**/*.o/**"/>
+        <exclude name="**/*.obj/**"/>
+        <exclude name="**/.hg/**"/>
+    </patternset>
+    <patternset id="library.patterns">
+        <include name="*.zip"/>
+        <include name="*.war"/>
+        <include name="*.egg"/>
+        <include name="*.ear"/>
+        <include name="*.aar"/>
+        <include name="*.swc"/>
+        <include name="*.jar"/>
+    </patternset>
+    <patternset id="compiler.resources">
+        <include name="**/?*.properties"/>
+        <include name="**/?*.xml"/>
+        <include name="**/?*.conf"/>
+        <include name="**/?*.gif"/>
+        <include name="**/?*.png"/>
+        <include name="**/?*.jpeg"/>
+        <include name="**/?*.jpg"/>
+        <include name="**/?*.html"/>
+        <include name="**/?*.dtd"/>
+        <include name="**/?*.tld"/>
+        <include name="**/?*.ftl"/>
+    </patternset>
+
+    <!-- Modules -->
+
+
+    <property name="compiler.args" value="${compiler.args}"/>
+
+    <property environment="os"/>
+    <property name="output.dir" value="${os.TEMP}/${ant.project.name}/out"/>
+    <property name="temp.dir" value="${output.dir}/tmp"/>
+    <property name="mainoutput.dir"
+              value="${output.dir}/production/${ant.project.name}"/>
+    <property name="testoutput.dir"
+              value="${output.dir}/test/${ant.project.name}"/>
+    <property name="output.dist" value="${basedir}/dist"/>
+    <loadfile property="file.lib.version" srcfile="build.txt" failonerror="false"/>
+
+    <path id="classpath">
+        <pathelement location="${mainoutput.dir}"/>
+        <fileset dir="${basedir}/lib">
+            <include name="*.jar"/>
+        </fileset>
+    </path>
+
+    <path id="runtime.classpath">
+        <pathelement location="${mainoutput.dir}"/>
+        <path refid="classpath"/>
+    </path>
+
+    <path id="test.classpath">
+        <pathelement location="${mainoutput.dir}"/>
+        <path refid="classpath"/>
+    </path>
+
+    <patternset id="excluded.from.module">
+        <patternset refid="ignored.files"/>
+    </patternset>
+
+    <patternset id="excluded.from.compilation">
+        <patternset refid="excluded.from.module"/>
+    </patternset>
+
+    <path id="module.sourcepath">
+        <dirset dir="${basedir}">
+            <include name="src/java"/>
+        </dirset>
+    </path>
+
+    <path id="module.test.sourcepath">
+        <dirset dir="${basedir}">
+            <include name="test/java"/>
+        </dirset>
+    </path>
+
+    <target name="compile.module"
+            depends="compile.module.production,compile.module.tests, test"
+            description="Compile module ${ant.project.name}"/>
+
+    <target name="compile.module.production"
+            description="Compile module ${ant.project.name}; production classes">
+        <mkdir dir="${mainoutput.dir}"/>
+        <javac destdir="${mainoutput.dir}"
+               includeantruntime="false"
+               debug="${compiler.debug}"
+               nowarn="${compiler.generate.no.warnings}"
+               memorymaximumsize="${compiler.max.memory}"
+               source="1.8"
+               target="1.8"
+               fork="true">
+            <compilerarg line="${compiler.args}"/>
+            <classpath refid="classpath"/>
+            <src refid="module.sourcepath"/>
+            <patternset refid="excluded.from.compilation"/>
+        </javac>
+    </target>
+
+    <target name="compile.module.tests" depends="compile.module.production"
+            description="compile module ${ant.project.name}; test classes" unless="skip.tests">
+        <mkdir dir="${testoutput.dir}"/>
+        <javac destdir="${testoutput.dir}"
+               includeantruntime="false"
+               debug="${compiler.debug}"
+               nowarn="${compiler.generate.no.warnings}"
+               memorymaximumsize="${compiler.max.memory}"
+               source="1.8"
+               target="1.8"
+               fork="true">
+            <compilerarg line="${compiler.args}"/>
+            <classpath refid="test.classpath"/>
+            <src refid="module.test.sourcepath"/>
+            <patternset refid="excluded.from.compilation"/>
+        </javac>
+
+    </target>
+
+    <target name="test" description="Make tests before packaging application" depends="compile.module.tests" unless="skip.tests">
+        <mkdir dir="${basedir}/report"/>
+        <junit haltonerror="yes" haltonfailure="yes" fork="true">
+            <classpath>
+                <path refid="test.classpath"/>
+                <pathelement location="${testoutput.dir}"/>
+                <pathelement location="${basedir}/test/res"/>
+            </classpath>
+
+            <batchtest todir="${basedir}/report">
+                <formatter type="xml"/>
+                <fileset dir="${testoutput.dir}">
+                    <include name="**/*Test.*"/>
+                    <exclude name="**/*Test.*$*"/>
+                </fileset>
+            </batchtest>
+        </junit>
+    </target>
+
+
+    <target name="clean.module" description="cleanup module">
+        <delete dir="${output.dist}"/>
+        <delete dir="${output.dir}"/>
+    </target>
+
+    <target name="-init.version.timestamp" unless="file.lib.version">
+        <tstamp>
+            <format property="timestamp.lib.version" pattern="yyyy-MM-dd" timezone="UTC"/>
+        </tstamp>
+
+        <property name="lib.version" value="${timestamp.lib.version}-TIMESTAMP"/>
+    </target>
+
+    <target name="-init.version.file" if="file.lib.version">
+        <property name="lib.version" value="${file.lib.version}"/>
+    </target>
+
+    <target name="init" depends="-init.version.file, -init.version.timestamp" description="Build initialization">
+    </target>
+
+    <target name="clean" depends="clean.module, clean.artifact.dist.zip" description="cleanup all"/>
+
+    <target name="build.modules"
+            depends="init, clean, compile.module"
+            description="build all modules"/>
+
+    <target name="init.artifacts">
+        <property name="artifacts.temp.dir" value="${basedir}/__artifacts_temp"/>
+        <property name="artifact.output.dist.zip" value="${basedir}/dist"/>
+        <property name="artifact.output" value="${basedir}/dist"/>
+        <mkdir dir="${artifacts.temp.dir}"/>
+        <property name="jar.name" value="${ant.project.name}-${lib.version}.jar"/>
+        <property name="bin-zip.name" value="${ant.project.name}-${lib.version}-bin.zip"/>
+        <property name="src-zip.name" value="${ant.project.name}-${lib.version}-src.zip"/>
+        <property name="temp.jar.path.jar" value="${artifacts.temp.dir}/${jar.name}"/>
+        <property name="temp.zip.path.zip" value="${artifacts.temp.dir}/tmp.zip"/>
+    </target>
+
+    <target name="clean.artifact.dist.zip" description="clean dist.zip artifact output">
+        <delete dir="${artifact.output.dist.zip}"/>
+    </target>
+
+    <target name="build.jar" depends="init.artifacts, compile.module"
+            description="Build &apos;${ant.project.name}&apos; artifact">
+        <property name="artifact.temp.output" value="${artifacts.temp.dir}/${ant.project.name}"/>
+        <mkdir dir="${artifact.temp.output}"/>
+        <jar destfile="${temp.jar.path.jar}" duplicate="preserve" filesetmanifest="mergewithoutmain">
+            <zipfileset dir="${mainoutput.dir}"/>
+        </jar>
+        <copy file="${temp.jar.path.jar}" tofile="${artifact.temp.output}/${jar.name}"/>
+    </target>
+
+    <target name="build.src" depends="init.artifacts"
+            description="Build &apos;${ant.project.name}&apos; sources artifact">
+        <property name="artifact.temp.output" value="${artifacts.temp.dir}/${ant.project.name}"/>
+        <mkdir dir="${artifact.temp.output}"/>
+        <zip destfile="${temp.zip.path.zip}" duplicate="preserve">
+            <zipfileset dir="${basedir}/src" prefix="src"/>
+            <zipfileset dir="${basedir}/test" prefix="test"/>
+            <zipfileset dir="${basedir}/lib" prefix="lib"/>
+            <zipfileset dir="${basedir}">
+                <include name="build.*"/>
+                <include name="*.iml"/>
+            </zipfileset>
+        </zip>
+        <copy file="${temp.zip.path.zip}" tofile="${artifact.temp.output}/${src-zip.name}"/>
+    </target>
+
+    <target name="build.dist" depends="init.artifacts, build.jar"
+            description="Build &apos;${ant.project.name}&apos; sources artifact">
+        <property name="artifact.temp.output" value="${artifacts.temp.dir}/${ant.project.name}"/>
+        <mkdir dir="${artifact.temp.output}"/>
+        <zip destfile="${temp.zip.path.zip}" duplicate="preserve">
+            <zipfileset file="${artifact.temp.output}/${jar.name}"/>
+            <zipfileset dir="${basedir}/lib" prefix="dep">
+                <exclude name="junit-*.jar"/>
+                <exclude name="hamcrest-core-*.jar"/>
+            </zipfileset>
+        </zip>
+        <copy file="${temp.zip.path.zip}" tofile="${artifact.temp.output}/${bin-zip.name}"/>
+    </target>
+
+    <target name="build.all.artifacts" description="Build all artifacts"
+            depends="build.jar, build.src, build.dist">
+        <mkdir dir="${artifact.output}"/>
+        <copy todir="${artifact.output}">
+            <fileset dir="${artifact.temp.output}"/>
+        </copy>
+
+        <!-- Delete temporary files -->
+        <delete dir="${artifacts.temp.dir}"/>
+    </target>
+
+
+    <target name="all" depends="build.modules, build.all.artifacts" description="build all"/>
+</project>
