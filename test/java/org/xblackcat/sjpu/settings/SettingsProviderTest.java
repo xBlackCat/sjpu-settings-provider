@@ -108,16 +108,49 @@ public class SettingsProviderTest {
             Config.use("/source/settings-blank.properties").get(Settings.class);
             Assert.fail("Exception is expected");
         } catch (SettingsException e) {
-            System.out.println(e.getMessage());
-            Assert.assertTrue(true);
+            Assert.assertEquals(
+                    "Default value should be set for primitive type with @SettingField annotation for method getSimpleName",
+                    e.getMessage()
+            );
         }
         try {
             Config.use("/source/settings-blank.properties").get(SettingsBlank.class);
             Assert.fail("Exception is expected");
         } catch (SettingsException e) {
-            System.out.println(e.getMessage());
-            Assert.assertTrue(true);
+            Assert.assertEquals(
+                    "Default value should be set for primitive type with @SettingField annotation for method getSimpleName",
+                    e.getMessage()
+            );
         }
+
+        {
+            final SettingsOptionalIgnore testSettings = Config.use("/source/settings-blank.properties").get(SettingsOptionalIgnore.class);
+
+            Assert.assertNull(testSettings.getSimpleName());
+            Assert.assertNull(testSettings.getNoNumber());
+            Assert.assertEquals(Numbers.One, testSettings.getOneDefault());
+            Assert.assertNull(testSettings.getNoNumbers());
+            Assert.assertNotNull(testSettings.getEmptyNumbers());
+            Assert.assertEquals(0, testSettings.getEmptyNumbers().size());
+            Assert.assertNull(testSettings.getNoNumbersMap());
+            Assert.assertNotNull(testSettings.getEmptyNumbersMap());
+            Assert.assertEquals(0, testSettings.getEmptyNumbersMap().size());
+
+            try {
+                final int value = testSettings.getValue();
+                Assert.fail("Expected NotImplemented exception");
+            } catch (NotImplementedException e) {
+                Assert.assertEquals("Method getValue is excluded from generation", e.getMessage());
+            }
+
+            try {
+                testSettings.notImplemented();
+                Assert.fail("Expected NotImplemented exception");
+            } catch (NotImplementedException e) {
+                Assert.assertEquals("Method notImplemented is excluded from generation", e.getMessage());
+            }
+        }
+
     }
 
     @Test
@@ -229,57 +262,55 @@ public class SettingsProviderTest {
             conf.get(InvalidComplexSettings1.class);
             Assert.fail("Exception expected");
         } catch (SettingsException e) {
-            System.out.println(e.getMessage());
-            Assert.assertTrue(true);
+            Assert.assertEquals("Only non-abstract classes could be specified as collection elements", e.getMessage());
         }
         try {
             conf.get(InvalidComplexSettings2.class);
             Assert.fail("Exception expected");
         } catch (SettingsException e) {
-            System.out.println(e.getMessage());
-            Assert.assertTrue(true);
+            Assert.assertEquals(
+                    "Please, specify container by interface java.util.Collection, java.util.List or java.util.Set as return type for collections.",
+                    e.getMessage()
+            );
         }
         try {
             conf.get(InvalidComplexSettings3.class);
             Assert.fail("Exception expected");
         } catch (SettingsException e) {
-            System.out.println(e.getMessage());
-            Assert.assertTrue(true);
+            Assert.assertEquals("Specified return object java.lang.Double cannot be casted to java.lang.CharSequence", e.getMessage());
         }
         try {
             conf.get(InvalidComplexSettings4.class);
             Assert.fail("Exception expected");
         } catch (SettingsException e) {
-            System.out.println(e.getMessage());
-            Assert.assertTrue(true);
+            Assert.assertEquals("Specified return object java.lang.String cannot be casted to java.lang.Number", e.getMessage());
         }
         try {
             conf.get(InvalidComplexSettings5.class);
             Assert.fail("Exception expected");
         } catch (SettingsException e) {
-            System.out.println(e.getMessage());
-            Assert.assertTrue(true);
+            Assert.assertEquals("Unknown type to parse: java.lang.Number", e.getMessage());
         }
         try {
             conf.get(InvalidComplexSettings6.class);
             Assert.fail("Exception expected");
         } catch (SettingsException e) {
-            System.out.println(e.getMessage());
-            Assert.assertTrue(true);
+            Assert.assertEquals("Specified return object java.lang.Double cannot be casted to java.lang.CharSequence", e.getMessage());
         }
         try {
             conf.get(InvalidComplexSettings7.class);
             Assert.fail("Exception expected");
         } catch (SettingsException e) {
-            System.out.println(e.getMessage());
-            Assert.assertTrue(true);
+            Assert.assertEquals("Specified return object java.lang.String cannot be casted to java.lang.Number", e.getMessage());
         }
         try {
             conf.get(InvalidComplexSettings8.class);
             Assert.fail("Exception expected");
         } catch (SettingsException e) {
-            System.out.println(e.getMessage());
-            Assert.assertTrue(true);
+            Assert.assertEquals(
+                    "Please, specify general interface for maps as return type for method public abstract java.util.HashMap org.xblackcat.sjpu.settings.InvalidComplexSettings8.wrongAnnotated()",
+                    e.getMessage()
+            );
         }
     }
 

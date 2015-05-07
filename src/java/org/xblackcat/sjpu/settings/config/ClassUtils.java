@@ -6,6 +6,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.xblackcat.sjpu.settings.NoPropertyException;
+import org.xblackcat.sjpu.settings.NotImplementedException;
 import org.xblackcat.sjpu.settings.SettingsException;
 import org.xblackcat.sjpu.settings.ann.*;
 import org.xblackcat.sjpu.settings.ann.Optional;
@@ -104,6 +105,10 @@ public class ClassUtils {
         List<Object> values = new ArrayList<>();
 
         for (Method method : clazz.getMethods()) {
+            if (method.isAnnotationPresent(Ignore.class)) {
+                continue;
+            }
+
             final GroupField groupField = method.getAnnotation(GroupField.class);
 
             try {
@@ -191,6 +196,38 @@ public class ClassUtils {
         return constructor;
     }
 
+    /**
+     * Returns full qualified name of the class in java-source form: inner class names separates with dot ('.') instead of dollar sign ('$')
+     *
+     * @param clazz class to get FQN
+     * @return full qualified name of the class in java-source form
+     */
+    public static String getName(Class<?> clazz) {
+        return StringUtils.replaceChars(checkArray(clazz), '$', '.');
+    }
+
+    protected static String checkArray(Class<?> clazz) {
+        if (!clazz.isArray()) {
+            return clazz.getName();
+        }
+
+        return checkArray(clazz.getComponentType()) + "[]";
+    }
+
+    public static CtClass[] toCtClasses(ClassPool pool, Class<?>... classes) throws NotFoundException {
+        CtClass[] ctClasses = new CtClass[classes.length];
+
+        int i = 0;
+        int classesLength = classes.length;
+
+        while (i < classesLength) {
+            ctClasses[i] = pool.get(getName(classes[i]));
+            i++;
+        }
+
+        return ctClasses;
+    }
+
     private static <T> CtClass buildSettingsClass(Class<T> clazz, ClassPool pool) throws SettingsException {
         if (!clazz.isInterface()) {
             throw new SettingsException("Only annotated interfaces are supported. " + clazz.getName() + " is a class.");
@@ -216,16 +253,37 @@ public class ClassUtils {
         int idx = 1;
         for (Method m : clazz.getMethods()) {
             final String mName = m.getName();
+            final Class<?> returnType = m.getReturnType();
 
-            if (m.getParameterTypes().length > 0) {
-                throw new SettingsException(
-                        "Method " +
-                                m.toString() +
-                                " has parameters - can't be processed as getter"
-                );
+            if (m.isAnnotationPresent(Ignore.class)) {
+                final CtClass retType;
+                try {
+                    retType = pool.get(returnType.getName());
+                } catch (NotFoundException e) {
+                    throw new SettingsException("Somehow a class " + returnType.getName() + " can't be found", e);
+                }
+
+                try {
+                    final CtMethod dumbMethod = CtNewMethod.make(
+                            Modifier.FINAL | Modifier.PUBLIC,
+                            retType,
+                            mName,
+                            toCtClasses(pool, m.getParameterTypes()),
+                            toCtClasses(pool, m.getExceptionTypes()),
+                            "{ throw new " + NotImplementedException.class.getName() + "(\"Method " + mName +
+                                    " is excluded from generation\"); }",
+                            settingsClass
+                    );
+                    settingsClass.addMethod(dumbMethod);
+                } catch (NotFoundException | CannotCompileException e) {
+                    throw new SettingsException("Can't add a dumb method " + mName + " to generated class", e);
+                }
+                continue;
             }
 
-            final Class<?> returnType = m.getReturnType();
+            if (m.getParameterTypes().length > 0) {
+                throw new SettingsException("Method " + m.toString() + " has parameters - can't be processed as getter");
+            }
 
             final String fieldName = makeFieldName(mName);
 
@@ -644,6 +702,10 @@ public class ClassUtils {
         // Search for possible prefixes
         Set<String> prefixes = new HashSet<>();
         for (Method mm : clazz.getMethods()) {
+            if (mm.isAnnotationPresent(Ignore.class)) {
+                continue;
+            }
+
             final String suffix = "." + buildPropertyName(null, mm);
 
             for (String name : propertyNames) {
@@ -722,6 +784,9 @@ public class ClassUtils {
 
     static <T> boolean allMethodsHaveDefaults(Class<T> clazz) {
         for (Method m : clazz.getDeclaredMethods()) {
+            if (m.isAnnotationPresent(Ignore.class)) {
+                continue;
+            }
             if (!m.isAnnotationPresent(DefaultValue.class)) {
                 return false;
             }
