@@ -19,8 +19,8 @@ final class ParserUtils {
     @SuppressWarnings("unchecked")
     static ArraySetter getArraySetter(Class<?> targetType) throws SettingsException {
         if (Object.class.isAssignableFrom(targetType)) {
-            final Function<String, Object> toObjectConverter = getToObjectConverter(targetType);
-            return (array, index, value) -> Array.set(array, index, toObjectConverter.apply(value));
+            final Function<String, ?> toObjectConverter = getToObjectConverter(targetType);
+            return getArraySetter(toObjectConverter);
         } else if (int.class.equals(targetType)) {
             return (o, i, valueStr) -> Array.setInt(o, i, Integer.parseInt(valueStr));
         } else if (long.class.equals(targetType)) {
@@ -38,8 +38,12 @@ final class ParserUtils {
         }
     }
 
+    static ArraySetter getArraySetter(Function<String, ?> toObjectConverter) {
+        return (array, index, value) -> Array.set(array, index, toObjectConverter.apply(value));
+    }
+
     @SuppressWarnings({"unchecked"})
-    static Function<String, Object> getToObjectConverter(Class<?> targetType) throws SettingsException {
+    static Function<String, ?> getToObjectConverter(Class<?> targetType) throws SettingsException {
         if (String.class.equals(targetType)) {
             return valueStr -> valueStr;
         } else if (Integer.class.equals(targetType)) {

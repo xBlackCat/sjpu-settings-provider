@@ -10,6 +10,7 @@ import org.xblackcat.sjpu.settings.NotImplementedException;
 import org.xblackcat.sjpu.settings.SettingsException;
 import org.xblackcat.sjpu.settings.ann.*;
 import org.xblackcat.sjpu.settings.ann.Optional;
+import org.xblackcat.sjpu.settings.converter.IParser;
 
 import java.lang.reflect.*;
 import java.util.*;
@@ -120,8 +121,17 @@ public class ClassUtils {
                     final String delimiter;
                     delimiter = getDelimiter(method);
 
-                    if (returnType.isArray()) {
-                        value = getArrayFieldValue(properties, prefixName, method, delimiter);
+                    final IParser<?> parser = getCustomConverter(method);
+                    if (parser != null && returnType.isAssignableFrom(parser.getReturnType())) {
+                        String valueStr = getStringValue(properties, prefixName, method);
+
+                        try {
+                            value = parser.apply(valueStr);
+                        } catch (RuntimeException e) {
+                            throw new SettingsException("Can't parse value " + valueStr + " to type " + returnType.getName(), e);
+                        }
+                    } else if (returnType.isArray()) {
+                        value = getArrayFieldValue(properties, prefixName, method, delimiter, parser);
                     } else if (Collection.class.isAssignableFrom(returnType)) {
                         value = getCollectionFieldValue(properties, prefixName, method, delimiter);
                     } else if (Map.class.isAssignableFrom(returnType)) {
@@ -153,6 +163,28 @@ public class ClassUtils {
             }
         }
         return values;
+    }
+
+    private static IParser<?> getCustomConverter(Method method) throws SettingsException {
+        final ParseWith parseWith = method.getAnnotation(ParseWith.class);
+        if (parseWith == null) {
+            return null;
+        }
+
+        final IParser<?> parser;
+        final Class<? extends IParser<?>> aClass = parseWith.value();
+        try {
+            // Check for default constructor
+            aClass.getConstructor();
+            parser = aClass.newInstance();
+        } catch (InstantiationException e) {
+            throw new SettingsException("Failed to instantiate converter class " + aClass, e);
+        } catch (IllegalAccessException e) {
+            throw new SettingsException("Failed to initialize converter class " + aClass, e);
+        } catch (NoSuchMethodException e) {
+            throw new SettingsException("Converter class " + aClass + " should have default public constructor", e);
+        }
+        return parser;
     }
 
     private static String getDelimiter(Method method) {
@@ -412,19 +444,34 @@ public class ClassUtils {
             IValueGetter properties,
             String prefixName,
             Method method,
-            String delimiter
+            String delimiter,
+            IParser<?> parser
     ) throws SettingsException {
         final Class<?> returnType = method.getReturnType();
+        Class<?> targetType = returnType.getComponentType();
+        if (parser != null) {
+            if (!targetType.isAssignableFrom(parser.getReturnType())) {
+                throw new SettingsException(
+                        "Converter return type " + parser.getReturnType().getName() + " can't be assigned to array component type" +
+                                returnType.getName()
+                );
+            }
+        }
+
         String arrayString = getStringValue(properties, prefixName, method);
 
         String[] values = StringUtils.splitByWholeSeparator(arrayString, delimiter);
-        Class<?> targetType = returnType.getComponentType();
         if (targetType == null) {
             throw new IllegalStateException("Array component type is null? " + returnType.getName());
         }
 
         Object o = Array.newInstance(targetType, values.length);
-        ParserUtils.ArraySetter setter = ParserUtils.getArraySetter(targetType);
+        final ParserUtils.ArraySetter setter;
+        if (parser == null) {
+            setter = ParserUtils.getArraySetter(targetType);
+        } else {
+            setter = ParserUtils.getArraySetter(parser);
+        }
 
         int i = 0;
         while (i < values.length) {
@@ -539,7 +586,7 @@ public class ClassUtils {
             throw new SettingsException("Only non-abstract classes could be specified as collection elements");
         }
 
-        Function<String, Object> parser = ParserUtils.getToObjectConverter(targetType);
+        Function<String, ?> parser = ParserUtils.getToObjectConverter(targetType);
 
         for (String valueStr : values) {
             try {
@@ -648,8 +695,8 @@ public class ClassUtils {
             map = new LinkedHashMap(values.length);
         }
 
-        Function<String, Object> keyParser = ParserUtils.getToObjectConverter(targetKeyType);
-        Function<String, Object> valueParser = ParserUtils.getToObjectConverter(targetValueType);
+        Function<String, ?> keyParser = ParserUtils.getToObjectConverter(targetKeyType);
+        Function<String, ?> valueParser = ParserUtils.getToObjectConverter(targetValueType);
 
         final String splitter = getSplitter(method);
 
