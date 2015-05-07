@@ -13,6 +13,13 @@ public class CustomParserTest {
         CustomObjectSettings s = Config.use("/source/custom-object.properties").get(CustomObjectSettings.class);
 
         s.getHost();
-        s.getHostList();
+    }
+
+    @Test
+    public void customObjectFailTest() throws SettingsException {
+        // TODO: write normal tests
+        CustomObjectSettingsFail s = Config.use("/source/custom-object.properties").get(CustomObjectSettingsFail.class);
+
+        s.getHost();
     }
 }

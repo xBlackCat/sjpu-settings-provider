@@ -133,7 +133,7 @@ public class ClassUtils {
                     } else if (returnType.isArray()) {
                         value = getArrayFieldValue(properties, prefixName, method, delimiter, parser);
                     } else if (Collection.class.isAssignableFrom(returnType)) {
-                        value = getCollectionFieldValue(properties, prefixName, method, delimiter);
+                        value = getCollectionFieldValue(properties, prefixName, method, delimiter, parser);
                     } else if (Map.class.isAssignableFrom(returnType)) {
                         value = getMapFieldValue(properties, prefixName, method, delimiter);
                     } else if (returnType.isInterface()) {
@@ -517,7 +517,8 @@ public class ClassUtils {
             IValueGetter properties,
             String prefixName,
             Method method,
-            String delimiter
+            String delimiter,
+            IParser<?> parser
     ) throws SettingsException {
         String arrayString = getStringValue(properties, prefixName, method);
         if (arrayString == null) {
@@ -536,8 +537,6 @@ public class ClassUtils {
             returnRawType = (Class<?>) method.getGenericReturnType();
             proposalReturnClass = null;
         }
-
-        String[] values = StringUtils.splitByWholeSeparator(arrayString, delimiter);
 
         final Class<?> targetType;
         CollectionOf collectionOf = method.getAnnotation(CollectionOf.class);
@@ -561,6 +560,16 @@ public class ClassUtils {
             );
         }
 
+        if (parser != null) {
+            if (!targetType.isAssignableFrom(parser.getReturnType())) {
+                throw new SettingsException(
+                        "Converter return type " + parser.getReturnType().getName() + " can't be assigned to array component type" +
+                                targetType.getName() + " for method " + method.getName()
+                );
+            }
+        }
+
+        String[] values = StringUtils.splitByWholeSeparator(arrayString, delimiter);
         final Collection collection;
         final boolean isList;
         if (returnRawType.equals(Set.class)) {
@@ -586,14 +595,19 @@ public class ClassUtils {
             throw new SettingsException("Only non-abstract classes could be specified as collection elements");
         }
 
-        Function<String, ?> parser = ParserUtils.getToObjectConverter(targetType);
+        final Function<String, ?> converter;
+        if (parser == null) {
+            converter = ParserUtils.getToObjectConverter(targetType);
+        } else {
+            converter = parser;
+        }
 
         for (String valueStr : values) {
             try {
                 if (valueStr == null) {
                     collection.add(null);
                 } else {
-                    collection.add(parser.apply(valueStr));
+                    collection.add(converter.apply(valueStr));
                 }
             } catch (RuntimeException e) {
                 throw new SettingsException("Can't parse value " + valueStr + " to type " + targetType.getName(), e);
