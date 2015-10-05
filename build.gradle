@@ -4,8 +4,8 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 version = new File('build.txt').getText('UTF-8')
-def outputBaseName = 'sjpu-utils'
-def projectTitle = 'SJPU Utils'
+def outputBaseName = 'sjpu-settings'
+def projectTitle = 'SJPU Settings provider library'
 ext.commonManifest = manifest {
     attributes(
             "Implementation-Title": projectTitle,
