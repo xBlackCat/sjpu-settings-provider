@@ -1,7 +1,6 @@
 package org.xblackcat.sjpu.settings.config;
 
 import javassist.ClassPool;
-import org.apache.commons.lang3.ObjectUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -9,6 +8,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 
 /**
@@ -28,7 +28,7 @@ public abstract class AnInputStreamConfig extends AConfig {
         final Properties properties = new Properties() {
             @Override
             public synchronized Object put(Object key, Object value) {
-                return shadow.put(ObjectUtils.toString(key, null), ObjectUtils.toString(value, null));
+                return shadow.put(Objects.toString(key, null), Objects.toString(value, null));
             }
         };
         properties.load(new InputStreamReader(is, StandardCharsets.UTF_8));

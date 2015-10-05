@@ -72,6 +72,8 @@ public final class Config {
      *
      * @param clazz class annotated with {@linkplain org.xblackcat.sjpu.settings.ann.SettingsSource @SettingsSource} annotation.
      * @return config reader
+     * @throws org.xblackcat.sjpu.settings.SettingsException if interface methods are not annotated or interface is not annotated with
+     *                                                       {@linkplain org.xblackcat.sjpu.settings.ann.SettingsSource @SettingsSource}
      */
     public static AConfig use(Class<?> clazz) throws SettingsException {
         final SettingsSource sourceAnn = clazz.getAnnotation(SettingsSource.class);
@@ -89,7 +91,7 @@ public final class Config {
     /**
      * Loads settings for specified interface. A default location of resource file is used. Default location is specified
      * by {@linkplain org.xblackcat.sjpu.settings.ann.SettingsSource @SettingsSource} annotation.
-     * <p/>
+     * <p>
      * If specified class marked with {@linkplain org.xblackcat.sjpu.settings.ann.Optional} annotation a <code>null</code> value will be
      * returned in case when required resource is not exists.
      *

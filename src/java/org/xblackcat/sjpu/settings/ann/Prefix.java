@@ -7,7 +7,7 @@ import java.lang.annotation.Target;
 
 /**
  * Sets prefix for property names in .property file
- * <p/>
+ * <p>
  * 12.02.13 11:23
  *
  * @author xBlackCat

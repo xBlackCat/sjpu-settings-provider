@@ -7,7 +7,7 @@ import java.lang.annotation.Target;
 
 /**
  * Define target key object class for parsing property value into map.
- * <p/>
+ * <p>
  * 15.10.13 18:27
  *
  * @author xBlackCat
@@ -16,7 +16,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD})
 public @interface MapKey {
     /**
-     * Defines a target map key object class.
+     * @return Defines a target map key object class.
      */
     Class<?> value();
 }

@@ -7,7 +7,7 @@ import java.lang.annotation.Target;
 
 /**
  * Default resource name for loading settings from.
- * <p/>
+ * <p>
  * 12.02.13 11:23
  *
  * @author xBlackCat

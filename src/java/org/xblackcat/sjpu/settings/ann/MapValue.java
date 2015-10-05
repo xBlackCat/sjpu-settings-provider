@@ -16,7 +16,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD})
 public @interface MapValue {
     /**
-     * Defines a target value object class.
+     * @return Defines a target value object class.
      */
     Class<?> value();
 }

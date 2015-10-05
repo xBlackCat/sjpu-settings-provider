@@ -7,7 +7,7 @@ import java.lang.annotation.Target;
 
 /**
  * Additional information for mapping value from .property file to field: default value if property is not defined in .properties file.
- * <p/>
+ * <p>
  * 12.02.13 11:24
  *
  * @author xBlackCat
@@ -16,7 +16,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD})
 public @interface DefaultValue {
     /**
-     * Default value for the field in string representation.
+     * @return Default value for the field in string representation.
      */
     String value();
 }

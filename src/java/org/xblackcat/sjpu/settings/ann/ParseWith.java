@@ -19,7 +19,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD})
 public @interface ParseWith {
     /**
-     * Defines a target map key object class.
+     * @return  Defines a target map key object class.
      */
     Class<? extends IParser<?>> value();
 }
