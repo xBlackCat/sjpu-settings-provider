@@ -1,11 +1,13 @@
 apply plugin: 'java'
 apply plugin: 'maven'
+apply plugin: 'signing'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
-group = 'org.xblackcat'
+group = 'org.xblackcat.sjpu'
 def projectTitle = 'SJPU Settings provider library'
+
 version = new File('build.txt').getText('UTF-8')
 ext.commonManifest = manifest {
     attributes(
@@ -13,7 +15,6 @@ ext.commonManifest = manifest {
             "Implementation-Version": version
     )
 }
-
 
 jar {
     manifest = project.manifest {
@@ -33,10 +34,10 @@ repositories {
 }
 
 dependencies {
-    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.+'
-    compile group: 'commons-logging', name: 'commons-logging', version: '1.+'
-    compile group: 'org.javassist', name: 'javassist', version: '[3.19,)'
-    testCompile group: 'junit', name: 'junit', version: '4.+'
+    compile group: 'org.apache.commons', name: 'commons-lang3', version: '[3.4,4.0)'
+    compile group: 'commons-logging', name: 'commons-logging', version: '[1.1,2.0)'
+    compile group: 'org.javassist', name: 'javassist', version: '[3.0,4.0)'
+    testCompile group: 'junit', name: 'junit', version: '[4.12,)'
 }
 
 task sourcesJar(type: Jar) {
@@ -51,9 +52,9 @@ javadoc {
     title = projectTitle
 }
 
-task docsJar(dependsOn: javadoc, type: Jar) {
+task javadocJar(dependsOn: javadoc, type: Jar) {
     from javadoc.outputs.files
-    classifier = 'docs'
+    classifier = 'javadoc'
     manifest = project.manifest {
         from commonManifest
     }
@@ -105,14 +106,56 @@ sourceSets {
     }
 }
 
+artifacts {
+    archives jar
+    archives javadocJar
+    archives sourcesJar
+}
+
+signing {
+    sign configurations.archives
+}
+
 uploadArchives {
     repositories {
         mavenDeployer {
+            beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
             repository(url: mavenCentralUrl) {
                 authentication(userName: mavenCentralUser, password: mavenCentralPassword)
             }
+
+            pom.project {
+                 name projectTitle
+                 packaging 'jar'
+                 description 'Utility class for loading properties from files/environment into data objects, declared as interfaces'
+                 url 'https://github.com/xBlackCat/sjpu-settings-provider'
+
+                 scm {
+                     url 'scm:git@github.com:xBlackCat/sjpu-settings-provider.git'
+                     connection 'scm:git@github.com:xBlackCat/sjpu-settings-provider.git'
+                     developerConnection 'scm:git@github.com:xBlackCat/sjpu-settings-provider.git'
+                 }
+
+                 licenses {
+                     license {
+                         name 'The Apache Software License, Version 2.0'
+                         url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                         distribution 'repo'
+                     }
+                 }
+
+                 developers {
+                     developer {
+                         id 'xBlackCat'
+                         name 'Zhukov Alexei'
+                         email 'xblackcat@gmail.com'
+                     }
+                 }
+             }
+
         }
     }
 }
 
-task buildAll(dependsOn: ['build', 'sourcesJar', 'binZip', 'sourcesZip', 'docsJar']) {}
+task buildAll(dependsOn: ['build', 'sourcesJar', 'binZip', 'sourcesZip', 'javadocJar']) {}
