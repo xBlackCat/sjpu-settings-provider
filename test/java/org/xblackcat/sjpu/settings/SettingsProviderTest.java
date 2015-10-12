@@ -103,6 +103,14 @@ public class SettingsProviderTest {
             Assert.assertEquals(0, testSettings.getEmptyNumbersMap().size());
         }
 
+        {
+            SettingsWithDefault settings = Config.get(SettingsWithDefault.class);
+
+            Assert.assertTrue(settings.alwaysTrue());
+            Assert.assertEquals(1, settings.getSimpleName());
+            Assert.assertEquals(42, settings.getComplexNameWithABBR());
+        }
+
         // Default value is not set for primitive field
         try {
             Config.use("/source/settings-blank.properties").get(Settings.class);

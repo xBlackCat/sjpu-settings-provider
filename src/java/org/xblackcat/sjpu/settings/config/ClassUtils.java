@@ -106,6 +106,9 @@ public class ClassUtils {
         List<Object> values = new ArrayList<>();
 
         for (Method method : clazz.getMethods()) {
+            if (method.isDefault()) {
+                continue;
+            }
             if (method.isAnnotationPresent(Ignore.class)) {
                 continue;
             }
@@ -286,6 +289,13 @@ public class ClassUtils {
         for (Method m : clazz.getMethods()) {
             final String mName = m.getName();
             final Class<?> returnType = m.getReturnType();
+
+            if (m.isDefault()) {
+                if (log.isTraceEnabled()) {
+                    log.trace("Ignore default method " + m + " in interface " + clazz.getName());
+                }
+                continue;
+            }
 
             if (m.isAnnotationPresent(Ignore.class)) {
                 final CtClass retType;
