@@ -106,10 +106,7 @@ public class ClassUtils {
         List<Object> values = new ArrayList<>();
 
         for (Method method : clazz.getMethods()) {
-            if (method.isDefault()) {
-                continue;
-            }
-            if (method.isAnnotationPresent(Ignore.class)) {
+            if (ignoreMethod(method)) {
                 continue;
             }
 
@@ -773,7 +770,7 @@ public class ClassUtils {
         // Search for possible prefixes
         Set<String> prefixes = new HashSet<>();
         for (Method mm : clazz.getMethods()) {
-            if (mm.isAnnotationPresent(Ignore.class)) {
+            if (ignoreMethod(mm)) {
                 continue;
             }
 
@@ -855,7 +852,7 @@ public class ClassUtils {
 
     static <T> boolean allMethodsHaveDefaults(Class<T> clazz) {
         for (Method m : clazz.getDeclaredMethods()) {
-            if (m.isAnnotationPresent(Ignore.class)) {
+            if (ignoreMethod(m)) {
                 continue;
             }
             if (!m.isAnnotationPresent(DefaultValue.class)) {
@@ -864,5 +861,9 @@ public class ClassUtils {
         }
 
         return true;
+    }
+
+    static boolean ignoreMethod(Method method) {
+        return method.isDefault() || method.isAnnotationPresent(Ignore.class);
     }
 }

@@ -111,6 +111,22 @@ public class SettingsProviderTest {
             Assert.assertEquals(42, settings.getComplexNameWithABBR());
         }
 
+        {
+            DefaultSettingsWithDefault settings = Config.get(DefaultSettingsWithDefault.class);
+
+            Assert.assertTrue(settings.alwaysTrue());
+            Assert.assertEquals(1, settings.getSimpleName());
+            Assert.assertEquals(42, settings.getComplexNameWithABBR());
+        }
+
+        {
+            DefaultSettingsWithDefault settings = Config.Defaults.get(DefaultSettingsWithDefault.class);
+
+            Assert.assertTrue(settings.alwaysTrue());
+            Assert.assertEquals(100, settings.getSimpleName());
+            Assert.assertEquals(0, settings.getComplexNameWithABBR());
+        }
+
         // Default value is not set for primitive field
         try {
             Config.use("/source/settings-blank.properties").get(Settings.class);
