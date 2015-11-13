@@ -47,9 +47,11 @@ public class MultiSourceConfig extends AConfig {
         @Override
         public String get(String key) {
             for (IValueGetter getter : loadedProperties) {
-                String value = getter.get(key);
-                if (value != null) {
-                    return value;
+                if (getter != null) {
+                    String value = getter.get(key);
+                    if (value != null) {
+                        return value;
+                    }
                 }
             }
             return null;
