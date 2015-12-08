@@ -155,7 +155,7 @@ public class ClassUtils {
 
                 values.add(value);
             } catch (NoPropertyException e) {
-                if (method.getAnnotation(org.xblackcat.sjpu.settings.ann.Optional.class) == null) {
+                if (method.getReturnType().isPrimitive() || method.getAnnotation(org.xblackcat.sjpu.settings.ann.Optional.class) == null) {
                     throw e;
                 }
                 // Optional values could be omitted
@@ -427,12 +427,7 @@ public class ClassUtils {
             final boolean optional = m.isAnnotationPresent(Optional.class);
             final String defValue = field == null ? null : field.value();
             if (StringUtils.isEmpty(defValue)) {
-                if (returnType.isPrimitive()) {
-                    throw new SettingsException(
-                            "Default value should be set for primitive type with @SettingField annotation for method " + m.getName()
-                    );
-                } else if (!optional && defValue == null) {
-                    // Default value is not defined
+                if (returnType.isPrimitive() || !optional && defValue == null) {
                     throw new NoPropertyException(propertyName, m);
                 }
             } else {
@@ -815,7 +810,8 @@ public class ClassUtils {
 
     static <T> T initialize(Constructor<T> c, List<Object> values) throws SettingsException {
         try {
-            return c.newInstance(values.toArray(new Object[values.size()]));
+            final Object[] array = values.toArray(new Object[values.size()]);
+            return c.newInstance(array);
         } catch (InstantiationException e) {
             throw new SettingsException("Can't make a new instance of my own class :(", e);
         } catch (IllegalAccessException e) {

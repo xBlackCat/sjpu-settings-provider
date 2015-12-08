@@ -133,7 +133,7 @@ public class SettingsProviderTest {
             Assert.fail("Exception is expected");
         } catch (SettingsException e) {
             Assert.assertEquals(
-                    "Default value should be set for primitive type with @SettingField annotation for method getSimpleName",
+                    "Property 'simple.name' is not set for method org.xblackcat.sjpu.settings.Settings#getSimpleName(). Use @DefaultValue annotation to specify default value for the property",
                     e.getMessage()
             );
         }
@@ -142,7 +142,7 @@ public class SettingsProviderTest {
             Assert.fail("Exception is expected");
         } catch (SettingsException e) {
             Assert.assertEquals(
-                    "Default value should be set for primitive type with @SettingField annotation for method getSimpleName",
+                    "Property 'simple.name' is not set for method org.xblackcat.sjpu.settings.SettingsBlank#getSimpleName(). Use @DefaultValue annotation to specify default value for the property",
                     e.getMessage()
             );
         }
