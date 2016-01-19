@@ -365,7 +365,7 @@ public class ClassUtils {
             toStringBody.append(" + \"");
             toStringBody.append(fieldName);
             toStringBody.append(" (");
-            toStringBody.append(makeFieldName(fieldName));
+            toStringBody.append(buildPropertyName(null, m));
             toStringBody.append(") = \\\"\" + java.lang.String.valueOf(this.");
             toStringBody.append(fieldName);
             toStringBody.append(") + \"\\\"; \"");
