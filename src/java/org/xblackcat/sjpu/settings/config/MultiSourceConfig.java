@@ -2,7 +2,6 @@ package org.xblackcat.sjpu.settings.config;
 
 import javassist.ClassPool;
 import org.apache.commons.lang3.ArrayUtils;
-import org.xblackcat.sjpu.settings.SettingsException;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -25,7 +24,7 @@ public class MultiSourceConfig extends AConfig {
     }
 
     @Override
-    protected IValueGetter loadProperties() throws IOException, SettingsException {
+    protected IValueGetter loadProperties() throws IOException {
         final IValueGetter[] loadedProperties = new IValueGetter[sources.length];
         int i = 0;
         while (i < sources.length) {

@@ -1,7 +1,6 @@
 package org.xblackcat.sjpu.settings.config;
 
 import javassist.ClassPool;
-import org.xblackcat.sjpu.settings.SettingsException;
 
 import java.io.IOException;
 
@@ -16,7 +15,7 @@ public class EnvConfig extends AConfig {
     }
 
     @Override
-    protected IValueGetter loadProperties() throws IOException, SettingsException {
+    protected IValueGetter loadProperties() throws IOException {
         return new MapWrapper(System.getenv());
     }
 }

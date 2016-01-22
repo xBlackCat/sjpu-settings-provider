@@ -8,7 +8,7 @@ import java.util.Set;
  *
  * @author xBlackCat
  */
-public interface IValueGetter {
+interface IValueGetter {
     IValueGetter EMPTY = new IValueGetter() {
         @Override
         public String get(String key) {

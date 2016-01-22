@@ -7,6 +7,7 @@ import org.xblackcat.sjpu.settings.config.*;
 
 import java.io.File;
 import java.net.URL;
+import java.nio.file.Path;
 
 /**
  * 14.04.2014 15:22
@@ -32,7 +33,25 @@ public final class Config {
      * @return config reader
      */
     public static AConfig use(File file) {
-        return new FileConfig(POOL_HOLDER.pool, file);
+        if (file == null) {
+            throw new NullPointerException("File can't be null");
+        }
+
+        return new InputStreamConfig(POOL_HOLDER.pool, () -> InputStreamConfig.getInputStream(file));
+    }
+
+    /**
+     * Builds a config reader from .properties file specified by {@linkplain Path Path} object.
+     *
+     * @param file .properties file.
+     * @return config reader
+     */
+    public static AConfig use(Path file) {
+        if (file == null) {
+            throw new NullPointerException("File can't be null");
+        }
+
+        return new InputStreamConfig(POOL_HOLDER.pool, () -> InputStreamConfig.getInputStream(file));
     }
 
     /**
@@ -42,7 +61,11 @@ public final class Config {
      * @return config reader
      */
     public static AConfig use(URL url) {
-        return new URLConfig(POOL_HOLDER.pool, url);
+        if (url == null) {
+            throw new NullPointerException("Url should be set");
+        }
+
+        return new InputStreamConfig(POOL_HOLDER.pool, url::openStream);
     }
 
     /**
@@ -52,7 +75,11 @@ public final class Config {
      * @return config reader
      */
     public static AConfig use(String resourceName) {
-        return new ResourceConfig(POOL_HOLDER.pool, resourceName);
+        if (resourceName == null) {
+            throw new NullPointerException("Resource name should be set");
+        }
+
+        return new InputStreamConfig(POOL_HOLDER.pool, () -> InputStreamConfig.buildInputStreamProvider(resourceName));
     }
 
     public static AConfig useEnv() {
@@ -85,7 +112,7 @@ public final class Config {
             );
         }
 
-        return new ResourceConfig(POOL_HOLDER.pool, sourceAnn.value());
+        return use(sourceAnn.value());
     }
 
     /**
@@ -120,5 +147,4 @@ public final class Config {
             pool.appendClassPath(new ClassClassPath(AConfig.class));
         }
     }
-
 }

@@ -5,6 +5,7 @@ import javassist.Modifier;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.xblackcat.sjpu.builder.BuilderUtils;
 import org.xblackcat.sjpu.settings.NoPropertyException;
 import org.xblackcat.sjpu.settings.NotImplementedException;
 import org.xblackcat.sjpu.settings.SettingsException;
@@ -25,46 +26,8 @@ import java.util.stream.Collectors;
 public class ClassUtils {
     private static final Log log = LogFactory.getLog(ClassUtils.class);
 
-    public static final CtClass[] EMPTY_LIST = new CtClass[]{};
     private static final String DEFAULT_DELIMITER = ",";
     private static final String DEFAULT_SPLITTER = ":";
-
-    public static <T extends Enum<T>> T searchForEnum(Class<T> clazz, String name) throws IllegalArgumentException {
-        try {
-            return Enum.valueOf(clazz, name);
-        } catch (IllegalArgumentException e) {
-            // Try to search case-insensitive
-            for (T c : clazz.getEnumConstants()) {
-                if (name.equalsIgnoreCase(c.name())) {
-                    return c;
-                }
-            }
-
-            throw e;
-        }
-    }
-
-    /**
-     * Generate a field name by getter method name: trims 'is' or 'get' at the beginning and convert to lower case the first letter.
-     *
-     * @param mName getter method name
-     * @return field name related to the getter.
-     */
-    public static String makeFieldName(String mName) {
-        if (mName.startsWith("get") && mName.length() > 3) {
-            final char[] fn = mName.toCharArray();
-            fn[3] = Character.toLowerCase(fn[3]);
-            return new String(fn, 3, fn.length - 3);
-        }
-
-        if (mName.startsWith("is") && mName.length() > 2) {
-            final char[] fn = mName.toCharArray();
-            fn[2] = Character.toLowerCase(fn[2]);
-            return new String(fn, 2, fn.length - 2);
-        }
-
-        return mName;
-    }
 
     public static String buildPropertyName(String prefixName, Method m) {
         StringBuilder propertyNameBuilder = new StringBuilder();
@@ -77,7 +40,7 @@ public class ClassUtils {
         if (field != null && StringUtils.isNotBlank(field.value())) {
             propertyNameBuilder.append(field.value());
         } else {
-            final String fieldName = makeFieldName(m.getName());
+            final String fieldName = BuilderUtils.makeFieldName(m.getName());
             boolean onHump = true;
             // Generate a property name from field name
             for (char c : fieldName.toCharArray()) {
@@ -228,38 +191,6 @@ public class ClassUtils {
         return constructor;
     }
 
-    /**
-     * Returns full qualified name of the class in java-source form: inner class names separates with dot ('.') instead of dollar sign ('$')
-     *
-     * @param clazz class to get FQN
-     * @return full qualified name of the class in java-source form
-     */
-    public static String getName(Class<?> clazz) {
-        return StringUtils.replaceChars(checkArray(clazz), '$', '.');
-    }
-
-    protected static String checkArray(Class<?> clazz) {
-        if (!clazz.isArray()) {
-            return clazz.getName();
-        }
-
-        return checkArray(clazz.getComponentType()) + "[]";
-    }
-
-    public static CtClass[] toCtClasses(ClassPool pool, Class<?>... classes) throws NotFoundException {
-        CtClass[] ctClasses = new CtClass[classes.length];
-
-        int i = 0;
-        int classesLength = classes.length;
-
-        while (i < classesLength) {
-            ctClasses[i] = pool.get(getName(classes[i]));
-            i++;
-        }
-
-        return ctClasses;
-    }
-
     private static <T> CtClass buildSettingsClass(Class<T> clazz, ClassPool pool) throws SettingsException {
         if (!clazz.isInterface()) {
             throw new SettingsException("Only annotated interfaces are supported. " + clazz.getName() + " is a class.");
@@ -307,8 +238,8 @@ public class ClassUtils {
                             Modifier.FINAL | Modifier.PUBLIC,
                             retType,
                             mName,
-                            toCtClasses(pool, m.getParameterTypes()),
-                            toCtClasses(pool, m.getExceptionTypes()),
+                            BuilderUtils.toCtClasses(pool, m.getParameterTypes()),
+                            BuilderUtils.toCtClasses(pool, m.getExceptionTypes()),
                             "{ throw new " + NotImplementedException.class.getName() + "(\"Method " + mName +
                                     " is excluded from generation\"); }",
                             settingsClass
@@ -324,7 +255,7 @@ public class ClassUtils {
                 throw new SettingsException("Method " + m.toString() + " has parameters - can't be processed as getter");
             }
 
-            final String fieldName = makeFieldName(mName);
+            final String fieldName = BuilderUtils.makeFieldName(mName);
 
             if (log.isTraceEnabled()) {
                 log.trace("Generate a field " + fieldName + " for class " + clazz.getName());
@@ -346,8 +277,8 @@ public class ClassUtils {
                         Modifier.FINAL | Modifier.PUBLIC,
                         retType,
                         mName,
-                        EMPTY_LIST,
-                        EMPTY_LIST,
+                        BuilderUtils.EMPTY_LIST,
+                        BuilderUtils.EMPTY_LIST,
                         "{ return this." + fieldName + "; }",
                         settingsClass
                 );
@@ -384,8 +315,8 @@ public class ClassUtils {
                     Modifier.FINAL | Modifier.PUBLIC,
                     pool.get(String.class.getName()),
                     "toString",
-                    EMPTY_LIST,
-                    EMPTY_LIST,
+                    BuilderUtils.EMPTY_LIST,
+                    BuilderUtils.EMPTY_LIST,
                     toStringBody.toString(),
                     settingsClass
             );
@@ -394,7 +325,7 @@ public class ClassUtils {
 
             final CtConstructor constructor = CtNewConstructor.make(
                     constructorParameters.toArray(new CtClass[constructorParameters.size()]),
-                    EMPTY_LIST,
+                    BuilderUtils.EMPTY_LIST,
                     constructorBody.toString(),
                     settingsClass
             );
@@ -494,26 +425,6 @@ public class ClassUtils {
         return o;
     }
 
-    private static Class<?> detectTypeArgClass(Type type) {
-        return detectTypeArgsClass(type, 1)[0];
-    }
-
-    private static Class<?>[] detectTypeArgsClass(Type type, int amount) {
-        Class<?>[] result = new Class[amount];
-        if ((type instanceof ParameterizedType)) {
-            final Type[] typeArguments = ((ParameterizedType) type).getActualTypeArguments();
-            if (typeArguments.length == amount) {
-                while (amount-- > 0) {
-                    final Type argument = typeArguments[amount];
-                    if (argument instanceof Class) {
-                        result[amount] = (Class<?>) argument;
-                    }
-                }
-            }
-        }
-        return result;
-    }
-
     @SuppressWarnings("unchecked")
     private static Object getCollectionFieldValue(
             IValueGetter properties,
@@ -534,7 +445,7 @@ public class ClassUtils {
                 throw new SettingsException("Raw type is not a class " + returnType + " in method " + method.toString());
             }
             returnRawType = (Class) returnType.getRawType();
-            proposalReturnClass = detectTypeArgClass(returnType);
+            proposalReturnClass = BuilderUtils.detectTypeArgClass(returnType);
         } else {
             returnRawType = (Class<?>) method.getGenericReturnType();
             proposalReturnClass = null;
@@ -646,7 +557,7 @@ public class ClassUtils {
                 throw new SettingsException("Raw type is not a class " + returnType + " in method " + method.toString());
             }
             returnRawType = (Class) returnType.getRawType();
-            Class<?>[] detectTypeArgsClass = detectTypeArgsClass(returnType, 2);
+            Class<?>[] detectTypeArgsClass = BuilderUtils.detectTypeArgsClass(returnType, 2);
             proposalKeyClass = detectTypeArgsClass[0];
             proposalValueClass = detectTypeArgsClass[1];
         } else {
@@ -819,31 +730,6 @@ public class ClassUtils {
         } catch (InvocationTargetException e) {
             throw new SettingsException("My class produces an exception :(", e);
         }
-    }
-
-    public static ClassPool getClassPool(ClassPool parent, Class<?> clazz, Class<?>... classes) {
-        ClassPool pool = new ClassPool(parent) {
-            @Override
-            public ClassLoader getClassLoader() {
-                return parent.getClassLoader();
-            }
-        };
-
-        Set<ClassLoader> usedLoaders = new HashSet<>();
-        usedLoaders.add(ClassLoader.getSystemClassLoader());
-        usedLoaders.add(ClassPool.class.getClassLoader());
-
-        if (usedLoaders.add(clazz.getClassLoader())) {
-            pool.appendClassPath(new ClassClassPath(clazz));
-        }
-
-        for (Class<?> c : classes) {
-            if (usedLoaders.add(c.getClassLoader())) {
-                pool.appendClassPath(new ClassClassPath(c));
-            }
-        }
-
-        return pool;
     }
 
     static <T> boolean allMethodsHaveDefaults(Class<T> clazz) {

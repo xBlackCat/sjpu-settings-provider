@@ -1,7 +1,6 @@
 package org.xblackcat.sjpu.settings.config;
 
 import javassist.ClassPool;
-import org.xblackcat.sjpu.settings.SettingsException;
 
 import java.io.IOException;
 import java.util.Set;
@@ -17,7 +16,7 @@ public class JvmConfig extends AConfig {
     }
 
     @Override
-    protected IValueGetter loadProperties() throws IOException, SettingsException {
+    protected IValueGetter loadProperties() throws IOException {
         return new IValueGetter() {
             @Override
             public String get(String key) {

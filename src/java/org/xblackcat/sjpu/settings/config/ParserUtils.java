@@ -2,6 +2,7 @@ package org.xblackcat.sjpu.settings.config;
 
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.xblackcat.sjpu.builder.BuilderUtils;
 import org.xblackcat.sjpu.settings.SettingsException;
 
 import java.lang.reflect.Array;
@@ -71,7 +72,7 @@ final class ParserUtils {
         } else if (char.class.equals(targetType)) {
             return valueStr -> valueStr.toCharArray()[0];
         } else if (Enum.class.isAssignableFrom(targetType)) {
-            return valueStr -> StringUtils.isBlank(valueStr) ? null : ClassUtils.searchForEnum((Class<Enum>) targetType, valueStr);
+            return valueStr -> StringUtils.isBlank(valueStr) ? null : BuilderUtils.searchForEnum((Class<Enum>) targetType, valueStr);
         } else {
             throw new SettingsException("Unknown type to parse: " + targetType.getName());
         }

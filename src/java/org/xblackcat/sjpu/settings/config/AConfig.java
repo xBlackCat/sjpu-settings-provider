@@ -3,6 +3,7 @@ package org.xblackcat.sjpu.settings.config;
 import javassist.ClassPool;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.xblackcat.sjpu.builder.BuilderUtils;
 import org.xblackcat.sjpu.settings.SettingsException;
 import org.xblackcat.sjpu.settings.ann.Optional;
 import org.xblackcat.sjpu.settings.ann.Prefix;
@@ -26,15 +27,17 @@ public abstract class AConfig {
         this.pool = pool;
     }
 
-    static <T> String getPrefix(Class<T> clazz) {
-        final String prefixName;
-        final Prefix prefixAnn = clazz.getAnnotation(Prefix.class);
-        if (prefixAnn != null) {
-            prefixName = prefixAnn.value();
-        } else {
-            prefixName = "";
-        }
-        return prefixName;
+    /**
+     * Loads settings for specified interface. Gets prefix for value names from {@linkplain org.xblackcat.sjpu.settings.ann.Prefix @Prefix}
+     * annotation if any. Optionality of the settings is specified with {@linkplain org.xblackcat.sjpu.settings.ann.Optional @Optional} annotation.
+     *
+     * @param clazz target interface class for holding settings.
+     * @param <T>   target interface for holding settings.
+     * @return initialized implementation of the specified interface class.
+     * @throws SettingsException if interface methods are not properly annotated
+     */
+    public <T> T get(Class<T> clazz) throws SettingsException {
+        return get(clazz, clazz.isAnnotationPresent(Optional.class));
     }
 
     /**
@@ -47,20 +50,8 @@ public abstract class AConfig {
      * @throws SettingsException if interface methods are not properly annotated
      */
     public <T> T get(Class<T> clazz, boolean optional) throws SettingsException {
-        return get(clazz, getPrefix(clazz), optional);
-    }
-
-    /**
-     * Loads settings for specified interface. Gets prefix for value names from {@linkplain org.xblackcat.sjpu.settings.ann.Prefix @Prefix}
-     * annotation if any. Optionality of the settings is specified with {@linkplain org.xblackcat.sjpu.settings.ann.Optional @Optional} annotation.
-     *
-     * @param clazz target interface class for holding settings.
-     * @param <T>   target interface for holding settings.
-     * @return initialized implementation of the specified interface class.
-     * @throws SettingsException if interface methods are not properly annotated
-     */
-    public <T> T get(Class<T> clazz) throws SettingsException {
-        return get(clazz, getPrefix(clazz));
+        final Prefix prefixAnn = clazz.getAnnotation(Prefix.class);
+        return get(clazz, prefixAnn != null ? prefixAnn.value() : "", optional);
     }
 
     /**
@@ -91,7 +82,7 @@ public abstract class AConfig {
             log.debug("Load defaults for class " + clazz.getName());
         }
 
-        ClassPool pool = ClassUtils.getClassPool(this.pool, clazz);
+        ClassPool pool = BuilderUtils.getClassPool(this.pool, clazz);
 
         @SuppressWarnings("unchecked") final Constructor<T> c = ClassUtils.getSettingsConstructor(clazz, pool);
 
@@ -124,6 +115,5 @@ public abstract class AConfig {
         return ClassUtils.initialize(c, values);
     }
 
-
-    protected abstract IValueGetter loadProperties() throws IOException, SettingsException;
+    protected abstract IValueGetter loadProperties() throws IOException;
 }

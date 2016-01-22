@@ -8,7 +8,7 @@ import java.util.Set;
  *
  * @author xBlackCat
  */
-public class MapWrapper implements IValueGetter {
+class MapWrapper implements IValueGetter {
     private final Map<String, String> map;
 
     public MapWrapper(Map<String, String> map) {
