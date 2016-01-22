@@ -118,6 +118,7 @@ public class SettingsProviderTest {
             Assert.assertTrue(settings.alwaysTrue());
             Assert.assertEquals(1, settings.getSimpleName());
             Assert.assertEquals(42, settings.getComplexNameWithABBR());
+            Assert.assertEquals("java.lang.Runnable", settings.getInterface());
         }
 
         {
@@ -126,6 +127,7 @@ public class SettingsProviderTest {
             Assert.assertTrue(settings.alwaysTrue());
             Assert.assertEquals(100, settings.getSimpleName());
             Assert.assertEquals(0, settings.getComplexNameWithABBR());
+            Assert.assertNull(settings.getInterface());
         }
 
         // Default value is not set for primitive field
@@ -213,6 +215,11 @@ public class SettingsProviderTest {
         ComplexSettings settings = Config.get(ComplexSettings.class);
 
         Assert.assertArrayEquals(new int[]{1, 10, 20, 50, 500, 1000}, settings.getIds());
+        settings.getIds()[4] = 2332332;
+        Assert.assertArrayEquals(new int[]{1, 10, 20, 50, 500, 1000}, settings.getIds());
+
+        Assert.assertTrue(Arrays.equals(new boolean[]{true, true, false, true, false, true, false, false}, settings.getFlags()));
+        settings.getFlags()[1] = false;
         Assert.assertTrue(Arrays.equals(new boolean[]{true, true, false, true, false, true, false, false}, settings.getFlags()));
         Assert.assertArrayEquals(new Numbers[]{Numbers.One, Numbers.Three, Numbers.Seven}, settings.getValues());
 

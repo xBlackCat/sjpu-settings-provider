@@ -1,6 +1,7 @@
 package org.xblackcat.sjpu.settings;
 
 import org.xblackcat.sjpu.settings.ann.DefaultValue;
+import org.xblackcat.sjpu.settings.ann.Optional;
 import org.xblackcat.sjpu.settings.ann.SettingsSource;
 
 /**
@@ -19,4 +20,10 @@ public interface DefaultSettingsWithDefault {
 
     @DefaultValue("0")
     int getComplexNameWithABBR();
+
+    /**
+     * Test reserved words filed
+     */
+    @Optional
+    String getInterface();
 }

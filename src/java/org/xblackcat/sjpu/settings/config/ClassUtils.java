@@ -255,7 +255,7 @@ public class ClassUtils {
                 throw new SettingsException("Method " + m.toString() + " has parameters - can't be processed as getter");
             }
 
-            final String fieldName = BuilderUtils.makeFieldName(mName);
+            final String fieldName = "__" + BuilderUtils.makeFieldName(mName);
 
             if (log.isTraceEnabled()) {
                 log.trace("Generate a field " + fieldName + " for class " + clazz.getName());
@@ -268,10 +268,23 @@ public class ClassUtils {
                 throw new SettingsException("Somehow a class " + returnType.getName() + " can't be found", e);
             }
 
+            final boolean returnTypeArray = returnType.isArray();
+            final String returnTypeName = BuilderUtils.getName(returnType);
             try {
                 CtField f = new CtField(retType, fieldName, settingsClass);
                 f.setModifiers(Modifier.FINAL | Modifier.PRIVATE);
                 settingsClass.addField(f);
+
+                final String body;
+                if (returnTypeArray) {
+                    body = "{ return (" + returnTypeName + ") this." + fieldName + ".clone()" + "; }";
+                } else {
+                    body = "{ return this." + fieldName + "" + "; }";
+                }
+
+                if (log.isTraceEnabled()) {
+                    log.trace("Implement method " + clazz.getName() + "#" + mName + "() " + body.toString());
+                }
 
                 final CtMethod getter = CtNewMethod.make(
                         Modifier.FINAL | Modifier.PUBLIC,
@@ -279,7 +292,7 @@ public class ClassUtils {
                         mName,
                         BuilderUtils.EMPTY_LIST,
                         BuilderUtils.EMPTY_LIST,
-                        "{ return this." + fieldName + "; }",
+                        body,
                         settingsClass
                 );
                 settingsClass.addMethod(getter);
@@ -287,11 +300,28 @@ public class ClassUtils {
                 throw new SettingsException("Can't add a field " + fieldName + " to generated class", e);
             }
 
-            constructorBody.append("this.");
-            constructorBody.append(fieldName);
-            constructorBody.append(" = $");
-            constructorBody.append(idx);
-            constructorBody.append(";\n");
+            if (returnTypeArray) {
+                constructorBody.append("if ($");
+                constructorBody.append(idx);
+                constructorBody.append(" != null) {\n");
+                constructorBody.append("this.");
+                constructorBody.append(fieldName);
+                constructorBody.append(" = (");
+                constructorBody.append(returnTypeName);
+                constructorBody.append(")$");
+                constructorBody.append(idx);
+                constructorBody.append(".clone();\n");
+                constructorBody.append("} else {\n");
+                constructorBody.append("this.");
+                constructorBody.append(fieldName);
+                constructorBody.append(" = null;\n}\n");
+            } else {
+                constructorBody.append("this.");
+                constructorBody.append(fieldName);
+                constructorBody.append(" = $");
+                constructorBody.append(idx);
+                constructorBody.append(";\n");
+            }
 
             toStringBody.append(" + \"");
             toStringBody.append(fieldName);
@@ -311,6 +341,10 @@ public class ClassUtils {
         toStringBody.append("]\";\n}");
 
         try {
+            if (log.isTraceEnabled()) {
+                log.trace("Generated method " + clazz.getName() + "#toString() " + toStringBody.toString());
+            }
+
             final CtMethod toString = CtNewMethod.make(
                     Modifier.FINAL | Modifier.PUBLIC,
                     pool.get(String.class.getName()),
@@ -322,6 +356,10 @@ public class ClassUtils {
             );
 
             settingsClass.addMethod(toString);
+
+            if (log.isTraceEnabled()) {
+                log.trace("Generated constructor " + clazz.getName() + "() " + constructorBody.toString());
+            }
 
             final CtConstructor constructor = CtNewConstructor.make(
                     constructorParameters.toArray(new CtClass[constructorParameters.size()]),
@@ -737,7 +775,7 @@ public class ClassUtils {
             if (ignoreMethod(m)) {
                 continue;
             }
-            if (!m.isAnnotationPresent(DefaultValue.class)) {
+            if (!m.isAnnotationPresent(DefaultValue.class) && !m.isAnnotationPresent(Optional.class)) {
                 return false;
             }
         }

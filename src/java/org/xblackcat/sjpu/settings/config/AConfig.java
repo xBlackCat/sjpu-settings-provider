@@ -23,7 +23,7 @@ public abstract class AConfig {
     private IValueGetter loadedProperties;
     private final ClassPool pool;
 
-    protected AConfig(ClassPool pool) {
+    AConfig(ClassPool pool) {
         this.pool = pool;
     }
 
