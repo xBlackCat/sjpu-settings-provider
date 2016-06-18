@@ -22,4 +22,9 @@ public class InetAddressParser implements IParser<InetAddress> {
             throw new IllegalArgumentException("Can't parse host", e);
         }
     }
+
+    @Override
+    public String formatDescription() {
+        return "Textual representation of IP or hostname";
+    }
 }

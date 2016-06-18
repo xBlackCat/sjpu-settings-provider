@@ -9,4 +9,8 @@ import java.util.function.Function;
  */
 public interface IParser<T> extends Function<String, T> {
     Class<T> getReturnType();
+
+    default String formatDescription() {
+        return null;
+    }
 }
