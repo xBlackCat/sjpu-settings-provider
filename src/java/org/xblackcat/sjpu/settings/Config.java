@@ -4,8 +4,11 @@ import javassist.ClassClassPath;
 import javassist.ClassPool;
 import org.xblackcat.sjpu.settings.ann.SettingsSource;
 import org.xblackcat.sjpu.settings.config.*;
+import org.xblackcat.sjpu.util.function.SupplierEx;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Path;
 
@@ -37,7 +40,7 @@ public final class Config {
             throw new NullPointerException("File can't be null");
         }
 
-        return new InputStreamConfig(POOL_HOLDER.pool, () -> InputStreamConfig.getInputStream(file));
+        return use(() -> InputStreamConfig.getInputStream(file));
     }
 
     /**
@@ -51,7 +54,7 @@ public final class Config {
             throw new NullPointerException("File can't be null");
         }
 
-        return new InputStreamConfig(POOL_HOLDER.pool, () -> InputStreamConfig.getInputStream(file));
+        return use(() -> InputStreamConfig.getInputStream(file));
     }
 
     /**
@@ -65,7 +68,7 @@ public final class Config {
             throw new NullPointerException("Url should be set");
         }
 
-        return new InputStreamConfig(POOL_HOLDER.pool, url::openStream);
+        return use(url::openStream);
     }
 
     /**
@@ -75,11 +78,17 @@ public final class Config {
      * @return config reader
      */
     public static AConfig use(String resourceName) {
-        if (resourceName == null) {
-            throw new NullPointerException("Resource name should be set");
-        }
+        return use(() -> InputStreamConfig.buildInputStreamProvider(resourceName));
+    }
 
-        return new InputStreamConfig(POOL_HOLDER.pool, () -> InputStreamConfig.buildInputStreamProvider(resourceName));
+    /**
+     * Builds a config reader from .properties file located in class path resources.
+     *
+     * @param inputStreamSupplier input stream provider with all the
+     * @return config reader
+     */
+    public static AConfig use(SupplierEx<InputStream, IOException> inputStreamSupplier) {
+        return new InputStreamConfig(POOL_HOLDER.pool, inputStreamSupplier);
     }
 
     public static AConfig useEnv() {
