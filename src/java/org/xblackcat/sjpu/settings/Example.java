@@ -133,13 +133,13 @@ public class Example {
         }
 
         for (ConfigInfo<?> ci : infos) {
-            printClass(printStream, ci.prefix, ci.clazz);
+            printStream.println("######");
+            printClass(printStream, ci.prefix, ci.clazz, false);
         }
 
     }
 
-    private void printClass(PrintStream printStream, String prefix, Class<?> clazz) throws SettingsException {
-        printStream.println("####");
+    private void printClass(PrintStream printStream, String prefix, Class<?> clazz, boolean classIsOptional) throws SettingsException {
         printDescription(printStream, getDescription(clazz));
 
         if (debugInfo) {
@@ -153,20 +153,22 @@ public class Example {
             printStream.println();
         }
 
-        printMethods(printStream, clazz, prefix);
+        printMethods(printStream, clazz, prefix, classIsOptional);
     }
 
-    private void printMethods(PrintStream printStream, Class<?> clazz, String prefix) throws SettingsException {
+    private void printMethods(PrintStream printStream, Class<?> clazz, String prefix, boolean classIsOptional) throws SettingsException {
         for (Method m : clazz.getMethods()) {
-            printMethod(printStream, clazz, prefix, m);
-
+            printMethod(printStream, clazz, prefix, m, classIsOptional);
         }
-
     }
 
-    private void printMethod(PrintStream printStream, Class<?> clazz, String prefix, Method m) throws SettingsException {
-        final String mName = m.getName();
-
+    private void printMethod(
+            PrintStream printStream,
+            Class<?> clazz,
+            String prefix,
+            Method m,
+            boolean classIsOptional
+    ) throws SettingsException {
         if (m.isDefault()) {
             if (log.isTraceEnabled()) {
                 log.trace("Ignore default method " + m + " in interface " + clazz.getName());
@@ -186,9 +188,6 @@ public class Example {
         printStream.println("##");
         printDescription(printStream, getDescription(m));
         final boolean optional = m.isAnnotationPresent(Optional.class);
-        if (optional) {
-            printStream.println("# (Optional)");
-        }
 
         final GroupField groupField = m.getAnnotation(GroupField.class);
         final String propertyName = ClassUtils.buildPropertyName(prefix, m);
@@ -202,10 +201,15 @@ public class Example {
             final boolean showDelimiterInfo = returnType.isArray() || Collection.class.isAssignableFrom(returnType) || showSplitterInfo;
 
             final IParser<?> parser = ClassUtils.getCustomConverter(m);
-            if (parser != null && returnType.isAssignableFrom(parser.getReturnType())) {
-                printDescription(printStream, "Value format: " + parser.formatDescription());
-            } else if (returnType.isInterface() && !showSplitterInfo && !showDelimiterInfo) {
-                printClass(printStream, propertyName, returnType);
+            final boolean customObject = parser != null && returnType.isAssignableFrom(parser.getReturnType());
+            if (!customObject && returnType.isInterface() && !showSplitterInfo && !showDelimiterInfo) {
+                printStream.print("#### ");
+                printStream.print(propertyName);
+                printStream.println(" group begin ####");
+                printClass(printStream, propertyName, returnType, optional);
+                printStream.print("#### ");
+                printStream.print(propertyName);
+                printStream.println(" group  end  ####");
             } else {
                 final String exampleValue = defaultValues.getOrDefault(propertyName, defaultValue);
                 if (parser != null) {
@@ -216,6 +220,9 @@ public class Example {
                 }
                 if (showSplitterInfo) {
                     printStream.println("# Key-value separator: '" + ClassUtils.getSplitter(m) + "'");
+                }
+                if (optional || classIsOptional) {
+                    printStream.println("# (Optional)");
                 }
 
                 if (debugInfo) {
@@ -230,7 +237,7 @@ public class Example {
                     printStream.println();
                 }
 
-                if (optional && defaultValue != null) {
+                if (optional || classIsOptional) {
                     printStream.print('!');
                 }
                 printStream.print(propertyName);

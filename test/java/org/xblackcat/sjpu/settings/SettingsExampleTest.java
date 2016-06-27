@@ -43,4 +43,13 @@ public class SettingsExampleTest {
                 .withDebugInfo()
                 .writeTo(System.out);
     }
+
+    @Test
+    public void makeCustomObjectExample() throws IOException, SettingsException {
+        Example.of(CustomObjectSettings.class, "custom")
+                .withHeader("Header")
+                .withFooter("Footer")
+                .withDebugInfo()
+                .writeTo(System.out);
+    }
 }

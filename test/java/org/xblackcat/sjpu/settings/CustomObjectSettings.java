@@ -1,5 +1,6 @@
 package org.xblackcat.sjpu.settings;
 
+import org.xblackcat.sjpu.settings.ann.Optional;
 import org.xblackcat.sjpu.settings.ann.ParseWith;
 import org.xblackcat.sjpu.settings.ann.PropertyName;
 import org.xblackcat.sjpu.settings.converter.InetAddressParser;
@@ -15,6 +16,7 @@ import java.util.Set;
  */
 public interface CustomObjectSettings {
     @ParseWith(InetAddressParser.class)
+    @Optional
     InetAddress getHost();
 
     @ParseWith(InetAddressParser.class)
