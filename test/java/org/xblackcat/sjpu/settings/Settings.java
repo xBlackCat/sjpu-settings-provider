@@ -12,7 +12,7 @@ import org.xblackcat.sjpu.settings.ann.SettingsSource;
 @SettingsSource("/source/settings")
 public interface Settings {
     @Optional
-    int getSimpleName();
+    String getSimpleName();
 
     @DefaultValue("0")
     int getComplexNameWithABBR();

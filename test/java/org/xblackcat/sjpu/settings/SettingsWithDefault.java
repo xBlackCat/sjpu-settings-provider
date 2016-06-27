@@ -18,7 +18,7 @@ public interface SettingsWithDefault {
 
     @Optional
     @Description("Optional integer value")
-    int getSimpleName();
+    Integer getSimpleName();
 
     @DefaultValue("0")
     int getComplexNameWithABBR();

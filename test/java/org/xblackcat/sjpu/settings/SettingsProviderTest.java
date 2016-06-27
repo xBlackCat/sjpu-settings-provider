@@ -108,7 +108,7 @@ public class SettingsProviderTest {
             SettingsWithDefault settings = Config.get(SettingsWithDefault.class);
 
             Assert.assertTrue(settings.alwaysTrue());
-            Assert.assertEquals(1, settings.getSimpleName());
+            Assert.assertEquals(Integer.valueOf(1), settings.getSimpleName());
             Assert.assertEquals(42, settings.getComplexNameWithABBR());
         }
 
