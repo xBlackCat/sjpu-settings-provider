@@ -24,10 +24,10 @@ public interface CustomObjectSettings {
     InetAddress[] getHostArray();
 
     @ParseWith(InetAddressParser.class)
-    @PropertyName("host.list")
+    @PropertyName("host.list2")
     List<InetAddress> getHostList();
 
     @ParseWith(InetAddressParser.class)
-    @PropertyName("host.list")
+    @PropertyName("host.set")
     Set<InetAddress> getHostSet();
 }

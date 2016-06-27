@@ -87,6 +87,7 @@ public class SettingsExampleTest {
             Example.of(CustomObjectSettings.class, "custom")
                     .withHeader("Header")
                     .withFooter("Footer")
+                    .withDefault("custom.host.list", "127.0.0.1,localhost")
                     .withDebugInfo()
                     .writeTo(vsf);
 
