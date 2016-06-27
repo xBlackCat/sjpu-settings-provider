@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
  * Define a description string for including it in generated option files.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.METHOD})
+@Target({ElementType.METHOD, ElementType.TYPE})
 public @interface Description {
     String value();
 }

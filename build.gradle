@@ -34,8 +34,8 @@ repositories {
 }
 
 dependencies {
-    compile group: 'org.xblackcat.sjpu', name: 'sjpu-rcb', version: '[0.2,1.0)'
-    compile group: 'org.xblackcat.sjpu', name: 'sjpu-utils', version: '[0.1.3,1.0)'
+    compile group: 'org.xblackcat.sjpu', name: 'sjpu-rcb', version: '[0.2.2,1.0)'
+    compile group: 'org.xblackcat.sjpu', name: 'sjpu-utils', version: '[0.1.4,1.0)'
     testCompile group: 'junit', name: 'junit', version: '[4.12,)'
 }
 

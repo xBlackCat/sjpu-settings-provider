@@ -6,8 +6,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.xblackcat.sjpu.settings.ann.Optional;
 import org.xblackcat.sjpu.settings.config.AConfig;
-import org.xblackcat.sjpu.settings.config.ClassUtils;
 import org.xblackcat.sjpu.settings.config.FakeConfig;
+import org.xblackcat.sjpu.settings.util.ClassUtils;
 
 import java.io.IOException;
 import java.lang.reflect.Method;

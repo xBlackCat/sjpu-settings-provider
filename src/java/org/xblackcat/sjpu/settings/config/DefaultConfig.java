@@ -1,6 +1,7 @@
 package org.xblackcat.sjpu.settings.config;
 
 import javassist.ClassPool;
+import org.xblackcat.sjpu.settings.util.IValueGetter;
 
 import java.io.IOException;
 

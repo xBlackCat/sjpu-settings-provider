@@ -1,5 +1,7 @@
 package org.xblackcat.sjpu.settings.config;
 
+import org.xblackcat.sjpu.settings.util.IValueGetter;
+
 import java.util.Map;
 import java.util.Set;
 

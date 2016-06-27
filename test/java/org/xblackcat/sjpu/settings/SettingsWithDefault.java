@@ -1,6 +1,7 @@
 package org.xblackcat.sjpu.settings;
 
 import org.xblackcat.sjpu.settings.ann.DefaultValue;
+import org.xblackcat.sjpu.settings.ann.Description;
 import org.xblackcat.sjpu.settings.ann.Optional;
 import org.xblackcat.sjpu.settings.ann.SettingsSource;
 
@@ -16,6 +17,7 @@ public interface SettingsWithDefault {
     }
 
     @Optional
+    @Description("Optional integer value")
     int getSimpleName();
 
     @DefaultValue("0")

@@ -1,5 +1,6 @@
 package org.xblackcat.sjpu.settings;
 
+import org.xblackcat.sjpu.settings.ann.DefaultValue;
 import org.xblackcat.sjpu.settings.ann.SettingsSource;
 import org.xblackcat.sjpu.settings.ann.Splitter;
 
@@ -22,6 +23,7 @@ public interface ComplexSettingsAuto {
 
     List<Numbers> getNumberList();
 
+    @DefaultValue("One,Two,Three")
     Set<Numbers> getNumberSet();
 
     Map<Numbers, String> getNumberMap();

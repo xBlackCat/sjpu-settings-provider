@@ -2,6 +2,7 @@ package org.xblackcat.sjpu.settings.config;
 
 import javassist.ClassPool;
 import org.apache.commons.lang3.ArrayUtils;
+import org.xblackcat.sjpu.settings.util.IValueGetter;
 
 import java.io.IOException;
 import java.util.HashSet;
