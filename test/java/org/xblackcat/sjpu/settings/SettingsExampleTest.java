@@ -37,7 +37,13 @@ public class SettingsExampleTest {
 
     @Test
     public void makeSubSettingsExample() throws IOException, SettingsException {
-        Example.of(IOptionalSubSettings.class, "optional")
+        Example.of(IOptionalSubSettings.class, "subsettings")
+                .withHeader("Header")
+                .withFooter("Footer")
+                .withDebugInfo()
+                .writeTo(System.out);
+
+        Example.of(SettingsOptionalIgnore.class, "optional")
                 .withHeader("Header")
                 .withFooter("Footer")
                 .withDebugInfo()
@@ -50,6 +56,15 @@ public class SettingsExampleTest {
                 .withHeader("Header")
                 .withFooter("Footer")
                 .withDebugInfo()
+                .writeTo(System.out);
+    }
+
+    @Test
+    public void makeGroupingExample() throws IOException, SettingsException {
+        Example.of(ISubSettingsGroups.class, "groups")
+                .withHeader("Header")
+                .withFooter("Footer")
+//                .withDebugInfo()
                 .writeTo(System.out);
     }
 }

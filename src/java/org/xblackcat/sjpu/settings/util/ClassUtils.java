@@ -88,10 +88,14 @@ public class ClassUtils {
                     if (parser != null && returnType.isAssignableFrom(parser.getReturnType())) {
                         String valueStr = getStringValue(properties, prefixName, method);
 
-                        try {
-                            value = parser.apply(valueStr);
-                        } catch (RuntimeException e) {
-                            throw new SettingsException("Can't parse value " + valueStr + " to type " + returnType.getName(), e);
+                        if (valueStr != null) {
+                            try {
+                                value = parser.apply(valueStr);
+                            } catch (RuntimeException e) {
+                                throw new SettingsException("Can't parse value " + valueStr + " to type " + returnType.getName(), e);
+                            }
+                        } else {
+                            value = null;
                         }
                     } else if (returnType.isArray()) {
                         value = getArrayFieldValue(properties, prefixName, method, delimiter, parser);
@@ -108,10 +112,14 @@ public class ClassUtils {
                     } else {
                         String valueStr = getStringValue(properties, prefixName, method);
 
-                        try {
-                            value = ParserUtils.getToObjectConverter(returnType).apply(valueStr);
-                        } catch (RuntimeException e) {
-                            throw new SettingsException("Can't parse value " + valueStr + " to type " + returnType.getName(), e);
+                        if (valueStr != null) {
+                            try {
+                                value = ParserUtils.getToObjectConverter(returnType).apply(valueStr);
+                            } catch (RuntimeException e) {
+                                throw new SettingsException("Can't parse value " + valueStr + " to type " + returnType.getName(), e);
+                            }
+                        } else {
+                            value = null;
                         }
                     }
                 }

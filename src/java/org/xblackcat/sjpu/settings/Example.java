@@ -137,6 +137,10 @@ public class Example {
             printClass(printStream, ci.prefix, ci.clazz, false);
         }
 
+        printStream.println();
+        if (printDescription(printStream, footer)) {
+            printStream.println();
+        }
     }
 
     private void printClass(PrintStream printStream, String prefix, Class<?> clazz, boolean classIsOptional) throws SettingsException {
@@ -194,7 +198,18 @@ public class Example {
         final String defaultValue = getDefaultValue(m);
 
         if (groupField != null) {
-//            value = getGroupFieldValue(pool, groupField.value(), properties, prefixName, method);
+            final Class<?> groupClass = groupField.value();
+            printStream.print("#### ");
+            printStream.print(propertyName);
+            printStream.println(" group begin ####");
+            if (!optional) {
+                printClass(printStream, propertyName, groupClass, false);
+            }
+            printClass(printStream, propertyName + "[.<group name>]", groupClass, true);
+            printStream.print("#### ");
+            printStream.print(propertyName);
+            printStream.println(" group  end  ####");
+
         } else {
             final Class<?> returnType = m.getReturnType();
             final boolean showSplitterInfo = Map.class.equals(returnType);
