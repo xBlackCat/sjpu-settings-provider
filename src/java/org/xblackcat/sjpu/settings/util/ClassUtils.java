@@ -439,12 +439,22 @@ public class ClassUtils {
 
         String arrayString = getStringValue(properties, prefixName, method);
 
-        String[] values = StringUtils.splitByWholeSeparator(arrayString, delimiter);
         if (targetType == null) {
             throw new IllegalStateException("Array component type is null? " + returnType.getName());
         }
 
-        Object o = Array.newInstance(targetType, values.length);
+        String[] values = StringUtils.splitByWholeSeparator(arrayString, delimiter);
+        final int arrayLength;
+        if (values != null) {
+            arrayLength = values.length;
+        } else {
+            arrayLength = 0;
+        }
+        Object o = Array.newInstance(targetType, arrayLength);
+        if (arrayLength == 0) {
+            return o;
+        }
+
         final ParserUtils.ArraySetter setter;
         if (parser == null) {
             setter = ParserUtils.getArraySetter(targetType);
@@ -453,7 +463,7 @@ public class ClassUtils {
         }
 
         int i = 0;
-        while (i < values.length) {
+        while (i < arrayLength) {
             String valueStr = values[i];
             try {
                 if (valueStr == null) {
@@ -532,6 +542,10 @@ public class ClassUtils {
         final Collection collection;
         final boolean isList;
         if (returnRawType.equals(Set.class)) {
+            if (values == null || values.length == 0) {
+                return Collections.emptySet();
+            }
+
             isList = false;
 
             if (Enum.class.isAssignableFrom(targetType)) {
@@ -540,6 +554,10 @@ public class ClassUtils {
                 collection = new LinkedHashSet<>(values.length);
             }
         } else if (returnRawType.equals(List.class) || returnRawType.equals(List.class)) {
+            if (values == null || values.length == 0) {
+                return Collections.emptyList();
+            }
+
             isList = true;
 
             collection = new ArrayList<>(values.length);
@@ -591,8 +609,6 @@ public class ClassUtils {
         if (arrayString == null) {
             return null;
         }
-
-        String[] values = StringUtils.splitByWholeSeparator(arrayString, delimiter);
 
         final Class<?> returnRawType;
         final Class<?> proposalKeyClass;
@@ -660,6 +676,12 @@ public class ClassUtils {
             );
         }
 
+
+        String[] values = StringUtils.splitByWholeSeparator(arrayString, delimiter);
+
+        if (values == null || values.length == 0) {
+            return Collections.emptyMap();
+        }
 
         final Map map;
         if (Enum.class.isAssignableFrom(targetKeyType)) {
