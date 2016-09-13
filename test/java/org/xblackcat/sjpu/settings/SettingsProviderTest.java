@@ -192,9 +192,10 @@ public class SettingsProviderTest {
 
     @Test
     public void combinedSettings() throws SettingsException, IOException {
-        final CombinedSettings settings = Config.use("/source/combined-settings.properties").get(CombinedSettings.class);
+        final AConfig config = Config.use("/source/combined-settings.properties");
+        final CombinedSettings settings = config.get(CombinedSettings.class);
 
-        Assert.assertEquals(1, settings.getSimpleName());
+        Assert.assertEquals("1", settings.getSimpleName());
         Assert.assertEquals(42, settings.getComplexNameWithABBR());
         Assert.assertEquals("Test", settings.getValue());
         Assert.assertEquals("Another", settings.getAnotherValue());
@@ -203,11 +204,18 @@ public class SettingsProviderTest {
         Settings s = conf.get(Settings.class);
         Settings2 s2 = conf.get(Settings2.class);
 
-        Assert.assertEquals(1, s.getSimpleName());
+        Assert.assertEquals("1", s.getSimpleName());
         Assert.assertEquals(42, s.getComplexNameWithABBR());
 
         Assert.assertEquals("Test", s2.getValue());
         Assert.assertEquals("Another", s2.getAnotherValue());
+
+        final Settings ss1 = conf.get(Settings.class);
+        final Settings ss2 = config.get(Settings.class);
+        Assert.assertEquals(s, ss1);
+        Assert.assertEquals(s, ss2);
+        Assert.assertEquals(s.hashCode(), ss1.hashCode());
+        Assert.assertEquals(s.hashCode(), ss2.hashCode());
     }
 
     @Test

@@ -213,13 +213,31 @@ public class ClassUtils {
             throw new SettingsException("Can't generate class for settings", e);
         }
 
+        List<String> fieldNames = new ArrayList<>();
+
         StringBuilder toStringBody = new StringBuilder();
+        StringBuilder equalsBody = new StringBuilder();
+
         StringBuilder constructorBody = new StringBuilder();
         List<CtClass> constructorParameters = new ArrayList<>();
+
         constructorBody.append("{\n");
+
         toStringBody.append("{\nreturn \"");
         toStringBody.append(clazz.getSimpleName());
         toStringBody.append(" [\"");
+
+        final String className = settingsClass.getName();
+        equalsBody.append(
+                "{\n" +
+                        "if (this == $1) return true;\n" +
+                        "if ($1 == null || getClass() != $1.getClass()) return false;\n" +
+                        "final "
+        );
+        equalsBody.append(className);
+        equalsBody.append(" that = (");
+        equalsBody.append(className);
+        equalsBody.append(") $1;\n return true");
 
         int idx = 1;
         for (Method m : clazz.getMethods()) {
@@ -266,7 +284,7 @@ public class ClassUtils {
             final String fieldName = "__" + BuilderUtils.makeFieldName(mName);
 
             if (log.isTraceEnabled()) {
-                log.trace("Generate a field " + fieldName + " for class " + clazz.getName());
+                log.trace("Generate a field " + fieldName + " for class " + clazz.getName() + " of type " + returnType.getName());
             }
 
             final CtClass retType;
@@ -277,7 +295,6 @@ public class ClassUtils {
             }
 
             final boolean returnTypeArray = returnType.isArray();
-            final String returnTypeName = BuilderUtils.getName(returnType);
             try {
                 CtField f = new CtField(retType, fieldName, settingsClass);
                 f.setModifiers(Modifier.FINAL | Modifier.PRIVATE);
@@ -285,7 +302,7 @@ public class ClassUtils {
 
                 final String body;
                 if (returnTypeArray) {
-                    body = "{ return (" + returnTypeName + ") this." + fieldName + ".clone()" + "; }";
+                    body = "{ return ($r) this." + fieldName + ".clone()" + "; }";
                 } else {
                     body = "{ return this." + fieldName + "" + "; }";
                 }
@@ -314,9 +331,7 @@ public class ClassUtils {
                 constructorBody.append(" != null) {\n");
                 constructorBody.append("this.");
                 constructorBody.append(fieldName);
-                constructorBody.append(" = (");
-                constructorBody.append(returnTypeName);
-                constructorBody.append(")$");
+                constructorBody.append(" = ($r)$");
                 constructorBody.append(idx);
                 constructorBody.append(".clone();\n");
                 constructorBody.append("} else {\n");
@@ -331,6 +346,27 @@ public class ClassUtils {
                 constructorBody.append(";\n");
             }
 
+            equalsBody.append(" &&\n");
+            if (returnTypeArray) {
+                equalsBody.append("java.util.Arrays.equals(");
+                equalsBody.append(fieldName);
+                equalsBody.append(", that.");
+                equalsBody.append(fieldName);
+                equalsBody.append(")");
+            } else if (returnType.isPrimitive() || returnType.isEnum()) {
+                equalsBody.append(fieldName);
+                equalsBody.append(" == ");
+                equalsBody.append(fieldName);
+                equalsBody.append("");
+            } else {
+                equalsBody.append("java.util.Objects.equals(");
+                equalsBody.append(fieldName);
+                equalsBody.append(", that.");
+                equalsBody.append(fieldName);
+                equalsBody.append(")");
+            }
+            fieldNames.add("($w)" + fieldName);
+
             toStringBody.append(" + \"");
             toStringBody.append(fieldName);
             toStringBody.append(" (");
@@ -344,11 +380,52 @@ public class ClassUtils {
             idx++;
         }
 
+        if (idx == 1) {
+            throw new SettingsException("Can't load settings to a class without properties. Class " + className);
+        }
+
         constructorBody.append("}");
         toStringBody.setLength(toStringBody.length() - 3);
         toStringBody.append("]\";\n}");
+        equalsBody.append(";\n}");
 
         try {
+            if (log.isTraceEnabled()) {
+                log.trace("Generated method " + clazz.getName() + "#equals() " + equalsBody.toString());
+            }
+
+            final CtMethod equals = CtNewMethod.make(
+                    Modifier.FINAL | Modifier.PUBLIC,
+                    pool.get(boolean.class.getName()),
+                    "equals",
+                    pool.get(new String[]{"java.lang.Object"}),
+                    BuilderUtils.EMPTY_LIST,
+                    equalsBody.toString(),
+                    settingsClass
+            );
+
+            settingsClass.addMethod(equals);
+
+            String hashCodeBody = "{\n" +
+                    "return java.util.Objects.hash(new java.lang.Object[]{\n" +
+                    String.join(",\n", fieldNames) +
+                    "\n});\n}";
+            if (log.isTraceEnabled()) {
+                log.trace("Generated method " + clazz.getName() + "#hashCode() " + hashCodeBody);
+            }
+
+            final CtMethod hashCode = CtNewMethod.make(
+                    Modifier.FINAL | Modifier.PUBLIC,
+                    pool.get(int.class.getName()),
+                    "hashCode",
+                    BuilderUtils.EMPTY_LIST,
+                    BuilderUtils.EMPTY_LIST,
+                    hashCodeBody,
+                    settingsClass
+            );
+
+            settingsClass.addMethod(hashCode);
+
             if (log.isTraceEnabled()) {
                 log.trace("Generated method " + clazz.getName() + "#toString() " + toStringBody.toString());
             }
