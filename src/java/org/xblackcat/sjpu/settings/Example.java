@@ -47,6 +47,7 @@ public class Example {
     private String header;
     private String footer;
     private boolean debugInfo;
+    private boolean brief;
 
     private Example() {
     }
@@ -83,6 +84,13 @@ public class Example {
 
     public Example withDebugInfo() {
         debugInfo = true;
+        brief = false;
+        return this;
+    }
+
+    public Example brief() {
+        debugInfo = false;
+        brief = true;
         return this;
     }
 
@@ -128,33 +136,40 @@ public class Example {
         }
 
         // Print header
-        if (printDescription(printStream, header)) {
+        if (!brief && printDescription(printStream, header)) {
             printStream.println();
         }
 
         for (ConfigInfo<?> ci : infos) {
-            printStream.println("######");
+            if (!brief) {
+                printStream.println("######");
+            }
             printClass(printStream, ci.prefix, ci.clazz, false);
         }
 
-        printStream.println();
-        if (printDescription(printStream, footer)) {
+        if (!brief) {
             printStream.println();
+            if (printDescription(printStream, footer)) {
+                printStream.println();
+            }
         }
     }
 
     private void printClass(PrintStream printStream, String prefix, Class<?> clazz, boolean classIsOptional) throws SettingsException {
-        printDescription(printStream, getDescription(clazz));
+        if (!brief) {
+            printDescription(printStream, getDescription(clazz));
+        }
 
         if (debugInfo) {
-            printStream.println("#");
-            printStream.print("# (debug) Interface ");
+            printStream.print("# (i) Interface ");
             printStream.print(BuilderUtils.getName(clazz));
             if (StringUtils.isNotBlank(prefix)) {
                 printStream.print(" with prefix ");
                 printStream.print(prefix);
             }
             printStream.println();
+            printStream.println("###");
+            printStream.println("#");
         }
 
         printMethods(printStream, clazz, prefix, classIsOptional);
@@ -189,8 +204,9 @@ public class Example {
         if (m.getParameterTypes().length > 0) {
             throw new SettingsException("Method " + m.toString() + " has parameters - can't be processed as getter");
         }
-        printStream.println("##");
-        printDescription(printStream, getDescription(m));
+        if (!brief) {
+            printDescription(printStream, getDescription(m));
+        }
         final boolean optional = m.isAnnotationPresent(Optional.class);
 
         final GroupField groupField = m.getAnnotation(GroupField.class);
@@ -198,17 +214,21 @@ public class Example {
         final String defaultValue = getDefaultValue(m);
 
         if (groupField != null) {
+            if (!brief) {
+                printStream.print("#### ");
+                printStream.print(propertyName);
+                printStream.println(" group begin ####");
+            }
             final Class<?> groupClass = groupField.value();
-            printStream.print("#### ");
-            printStream.print(propertyName);
-            printStream.println(" group begin ####");
             if (!optional) {
                 printClass(printStream, propertyName, groupClass, false);
             }
             printClass(printStream, propertyName + "[.<group name>]", groupClass, true);
-            printStream.print("#### ");
-            printStream.print(propertyName);
-            printStream.println(" group  end  ####");
+            if (!brief) {
+                printStream.print("#### ");
+                printStream.print(propertyName);
+                printStream.println(" group  end  ####");
+            }
 
         } else {
             final Class<?> returnType = m.getReturnType();
@@ -218,38 +238,43 @@ public class Example {
             final IParser<?> parser = ClassUtils.getCustomConverter(m);
             final boolean customObject = parser != null && returnType.isAssignableFrom(parser.getReturnType());
             if (!customObject && returnType.isInterface() && !showSplitterInfo && !showDelimiterInfo) {
-                printStream.print("#### ");
-                printStream.print(propertyName);
-                printStream.println(" group begin ####");
+                if (!brief) {
+                    printStream.print("#### ");
+                    printStream.print(propertyName);
+                    printStream.println(" group begin ####");
+                }
                 printClass(printStream, propertyName, returnType, optional);
-                printStream.print("#### ");
-                printStream.print(propertyName);
-                printStream.println(" group  end  ####");
+                if (!brief) {
+                    printStream.print("#### ");
+                    printStream.print(propertyName);
+                    printStream.println(" group  end  ####");
+                }
             } else {
                 final String exampleValue = defaultValues.getOrDefault(propertyName, defaultValue);
-                if (parser != null) {
-                    printDescription(printStream, "Value format: " + parser.formatDescription());
-                }
-                if (showDelimiterInfo) {
-                    printStream.println("# Values delimiter: '" + ClassUtils.getDelimiter(m) + "'");
-                }
-                if (showSplitterInfo) {
-                    printStream.println("# Key-value separator: '" + ClassUtils.getSplitter(m) + "'");
-                }
-                if (optional || classIsOptional) {
-                    printStream.println("# (Optional)");
-                }
+                if (!brief) {
+                    if (parser != null) {
+                        printDescription(printStream, "Value format: " + parser.formatDescription());
+                    }
+                    if (showDelimiterInfo) {
+                        printStream.println("# Values delimiter: '" + ClassUtils.getDelimiter(m) + "'");
+                    }
+                    if (showSplitterInfo) {
+                        printStream.println("# Key-value separator: '" + ClassUtils.getSplitter(m) + "'");
+                    }
 
-                if (debugInfo) {
-                    printStream.println("#");
-                    printStream.print("# (debug) Method ");
-                    printStream.print(BuilderUtils.getName(clazz));
-                    printStream.print("#");
-                    printStream.print(m.getName());
-                    printStream.println("()");
-                    printStream.print("# (debug) Java value type: ");
-                    printStream.print(BuilderUtils.getName(m.getGenericReturnType()));
-                    printStream.println();
+                    if (debugInfo) {
+                        printStream.print("# (i) Method ");
+                        printStream.print(BuilderUtils.getName(clazz));
+                        printStream.print("#");
+                        printStream.print(m.getName());
+                        printStream.println("()");
+                        printStream.print("# (i) Java value type: ");
+                        printStream.print(BuilderUtils.getName(m.getGenericReturnType()));
+                        printStream.println();
+                    }
+                    if (optional || classIsOptional) {
+                        printStream.println("# (Optional)");
+                    }
                 }
 
                 if (optional || classIsOptional) {
@@ -261,6 +286,9 @@ public class Example {
                     printStream.print(exampleValue);
                 }
                 printStream.println();
+                if (!brief) {
+                    printStream.println();
+                }
             }
         }
     }
