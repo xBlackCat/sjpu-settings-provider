@@ -215,7 +215,6 @@ public class Example {
         final boolean hasDefault = annotation != null;
         final String defaultValue = hasDefault ? annotation.value() : null;
 
-        final boolean usedDefaultValue;
         if (groupField != null) {
             if (!brief) {
                 printStream.print("#### ");
@@ -232,7 +231,6 @@ public class Example {
                 printStream.print(propertyName);
                 printStream.println(" group  end  ####");
             }
-            usedDefaultValue = false;
         } else {
             final Class<?> returnType = m.getReturnType();
             final boolean showSplitterInfo = Map.class.equals(returnType);
@@ -252,9 +250,8 @@ public class Example {
                     printStream.print(propertyName);
                     printStream.println(" group  end  ####");
                 }
-                usedDefaultValue = false;
             } else {
-                usedDefaultValue = !substitutionValues.containsKey(propertyName);
+                final boolean usedDefaultValue = !substitutionValues.containsKey(propertyName);
                 final String exampleValue = substitutionValues.getOrDefault(propertyName, defaultValue);
                 if (!brief) {
                     if (parser != null) {
