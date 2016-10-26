@@ -331,7 +331,9 @@ public class ClassUtils {
                 constructorBody.append(" != null) {\n");
                 constructorBody.append("this.");
                 constructorBody.append(fieldName);
-                constructorBody.append(" = ($r)$");
+                constructorBody.append(" = (");
+                constructorBody.append(BuilderUtils.getName(returnType));
+                constructorBody.append(")$");
                 constructorBody.append(idx);
                 constructorBody.append(".clone();\n");
                 constructorBody.append("} else {\n");
