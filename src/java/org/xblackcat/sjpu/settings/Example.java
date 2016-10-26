@@ -43,7 +43,7 @@ public class Example {
     }
 
     private final List<ConfigInfo<?>> infos = new ArrayList<>();
-    private final Map<String, String> defaultValues = new HashMap<>();
+    private final Map<String, String> substitutionValues = new HashMap<>();
     private String header;
     private String footer;
     private boolean debugInfo;
@@ -73,12 +73,12 @@ public class Example {
     }
 
     public Example withDefault(String key, String value) {
-        defaultValues.put(key, value);
+        substitutionValues.put(key, value);
         return this;
     }
 
     public Example withDefault(Map<String, String> defaults) {
-        defaultValues.putAll(defaults);
+        substitutionValues.putAll(defaults);
         return this;
     }
 
@@ -211,8 +211,11 @@ public class Example {
 
         final GroupField groupField = m.getAnnotation(GroupField.class);
         final String propertyName = ClassUtils.buildPropertyName(prefix, m);
-        final String defaultValue = getDefaultValue(m);
+        final DefaultValue annotation = m.getAnnotation(DefaultValue.class);
+        final boolean hasDefault = annotation != null;
+        final String defaultValue = hasDefault ? annotation.value() : null;
 
+        final boolean usedDefaultValue;
         if (groupField != null) {
             if (!brief) {
                 printStream.print("#### ");
@@ -229,7 +232,7 @@ public class Example {
                 printStream.print(propertyName);
                 printStream.println(" group  end  ####");
             }
-
+            usedDefaultValue = false;
         } else {
             final Class<?> returnType = m.getReturnType();
             final boolean showSplitterInfo = Map.class.equals(returnType);
@@ -249,8 +252,10 @@ public class Example {
                     printStream.print(propertyName);
                     printStream.println(" group  end  ####");
                 }
+                usedDefaultValue = false;
             } else {
-                final String exampleValue = defaultValues.getOrDefault(propertyName, defaultValue);
+                usedDefaultValue = !substitutionValues.containsKey(propertyName);
+                final String exampleValue = substitutionValues.getOrDefault(propertyName, defaultValue);
                 if (!brief) {
                     if (parser != null) {
                         printDescription(printStream, "Value format: " + parser.formatDescription());
@@ -277,7 +282,7 @@ public class Example {
                     }
                 }
 
-                if (optional || classIsOptional) {
+                if (optional || classIsOptional || hasDefault && usedDefaultValue) {
                     printStream.print('!');
                 }
                 printStream.print(propertyName);
@@ -295,11 +300,6 @@ public class Example {
 
     private String getDescription(AnnotatedElement e) {
         final Description annotation = e.getAnnotation(Description.class);
-        return annotation == null ? null : annotation.value();
-    }
-
-    private String getDefaultValue(Method e) {
-        final DefaultValue annotation = e.getAnnotation(DefaultValue.class);
         return annotation == null ? null : annotation.value();
     }
 

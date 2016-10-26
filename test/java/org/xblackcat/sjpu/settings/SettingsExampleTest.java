@@ -85,6 +85,18 @@ public class SettingsExampleTest {
                     .withHeader("Header")
                     .withFooter("Footer")
                     .withDebugInfo()
+                    .withDefault("prefix.number.set", "Two,Three")
+                    .writeTo(vsf);
+
+            vsf.print(System.out);
+
+            Config.use(vsf::getAsInputStream).get(ComplexSettingsAuto.class, "prefix");
+        }
+        try (VirtualSettingsFile vsf = new VirtualSettingsFile()) {
+            Example.of(ComplexSettingsAuto.class, "prefix")
+                    .withHeader("Header")
+                    .withFooter("Footer")
+                    .withDebugInfo()
                     .writeTo(vsf);
 
             vsf.print(System.out);
