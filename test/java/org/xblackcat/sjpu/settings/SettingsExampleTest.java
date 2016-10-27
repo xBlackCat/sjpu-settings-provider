@@ -25,6 +25,7 @@ public class SettingsExampleTest {
             final Settings settings = Config.use(vsf::getAsInputStream).get(Settings.class, "test1");
             final Settings2 settings2 = Config.use(vsf::getAsInputStream).get(Settings2.class, "test2");
         }
+        System.out.println("-----------------------------------------------------------------------------------------");
 
         try (VirtualSettingsFile vsf = new VirtualSettingsFile()) {
             Example.of(Settings2.class, "test2")
@@ -38,6 +39,7 @@ public class SettingsExampleTest {
             final Settings settings = Config.use(vsf::getAsInputStream).get(Settings.class, "test1");
             final Settings2 settings2 = Config.use(vsf::getAsInputStream).get(Settings2.class, "test2");
         }
+        System.out.println("-----------------------------------------------------------------------------------------");
 
         try (VirtualSettingsFile vsf = new VirtualSettingsFile()) {
             Example.of(Settings2.class, "test2")
@@ -52,6 +54,7 @@ public class SettingsExampleTest {
             final Settings settings = Config.use(vsf::getAsInputStream).get(Settings.class, "test1");
             final Settings2 settings2 = Config.use(vsf::getAsInputStream).get(Settings2.class, "test2");
         }
+        System.out.println("-----------------------------------------------------------------------------------------");
 
         try (VirtualSettingsFile vsf = new VirtualSettingsFile()) {
             Example.of(SettingsWithDefault.class, "def")
@@ -64,6 +67,7 @@ public class SettingsExampleTest {
 
             Config.use(vsf::getAsInputStream).get(SettingsWithDefault.class, "def");
         }
+        System.out.println("-----------------------------------------------------------------------------------------");
 
         try (VirtualSettingsFile vsf = new VirtualSettingsFile()) {
             Example.of(SettingsWithDefault.class, "def")
@@ -92,6 +96,7 @@ public class SettingsExampleTest {
 
             Config.use(vsf::getAsInputStream).get(ComplexSettingsAuto.class, "prefix");
         }
+        System.out.println("-----------------------------------------------------------------------------------------");
         try (VirtualSettingsFile vsf = new VirtualSettingsFile()) {
             Example.of(ComplexSettingsAuto.class, "prefix")
                     .withHeader("Header")
@@ -103,6 +108,7 @@ public class SettingsExampleTest {
 
             Config.use(vsf::getAsInputStream).get(ComplexSettingsAuto.class, "prefix");
         }
+        System.out.println("-----------------------------------------------------------------------------------------");
         try (VirtualSettingsFile vsf = new VirtualSettingsFile()) {
             Example.of(ComplexSettingsAuto.class, "prefix")
                     .withHeader("Header")
@@ -113,6 +119,7 @@ public class SettingsExampleTest {
 
             Config.use(vsf::getAsInputStream).get(ComplexSettingsAuto.class, "prefix");
         }
+        System.out.println("-----------------------------------------------------------------------------------------");
         try (VirtualSettingsFile vsf = new VirtualSettingsFile()) {
             Example.of(ComplexSettingsAuto.class, "prefix")
                     .withHeader("Header")
@@ -139,6 +146,7 @@ public class SettingsExampleTest {
 
             Config.use(vsf::getAsInputStream).get(IOptionalSubSettings.class, "subsettings");
         }
+        System.out.println("-----------------------------------------------------------------------------------------");
         try (VirtualSettingsFile vsf = new VirtualSettingsFile()) {
             Example.of(IOptionalSubSettings.class, "subsettings")
                     .withHeader("Header")
@@ -149,6 +157,7 @@ public class SettingsExampleTest {
 
             Config.use(vsf::getAsInputStream).get(IOptionalSubSettings.class, "subsettings");
         }
+        System.out.println("-----------------------------------------------------------------------------------------");
         try (VirtualSettingsFile vsf = new VirtualSettingsFile()) {
             Example.of(IOptionalSubSettings.class, "subsettings")
                     .withHeader("Header")
@@ -160,6 +169,7 @@ public class SettingsExampleTest {
 
             Config.use(vsf::getAsInputStream).get(IOptionalSubSettings.class, "subsettings");
         }
+        System.out.println("-----------------------------------------------------------------------------------------");
 
         try (VirtualSettingsFile vsf = new VirtualSettingsFile()) {
             Example.of(SettingsOptionalIgnore.class, "optional")
@@ -172,6 +182,7 @@ public class SettingsExampleTest {
 
             Config.use(vsf::getAsInputStream).get(SettingsOptionalIgnore.class, "optional");
         }
+        System.out.println("-----------------------------------------------------------------------------------------");
         try (VirtualSettingsFile vsf = new VirtualSettingsFile()) {
             Example.of(SettingsOptionalIgnore.class, "optional")
                     .withHeader("Header")
@@ -182,6 +193,7 @@ public class SettingsExampleTest {
 
             Config.use(vsf::getAsInputStream).get(SettingsOptionalIgnore.class, "optional");
         }
+        System.out.println("-----------------------------------------------------------------------------------------");
         try (VirtualSettingsFile vsf = new VirtualSettingsFile()) {
             Example.of(SettingsOptionalIgnore.class, "optional")
                     .withHeader("Header")
@@ -209,6 +221,31 @@ public class SettingsExampleTest {
 
             Config.use(vsf::getAsInputStream).get(CustomObjectSettings.class, "custom");
         }
+        System.out.println("-----------------------------------------------------------------------------------------");
+        try (VirtualSettingsFile vsf = new VirtualSettingsFile()) {
+            Example.of(CustomObjectSettings.class, "custom")
+                    .withHeader("Header")
+                    .withFooter("Footer")
+                    .withDefault("custom.host.list", "127.0.0.1,localhost")
+                    .writeTo(vsf);
+
+            vsf.print(System.out);
+
+            Config.use(vsf::getAsInputStream).get(CustomObjectSettings.class, "custom");
+        }
+        System.out.println("-----------------------------------------------------------------------------------------");
+        try (VirtualSettingsFile vsf = new VirtualSettingsFile()) {
+            Example.of(CustomObjectSettings.class, "custom")
+                    .withHeader("Header")
+                    .withFooter("Footer")
+                    .withDefault("custom.host.list", "127.0.0.1,localhost")
+                    .brief()
+                    .writeTo(vsf);
+
+            vsf.print(System.out);
+
+            Config.use(vsf::getAsInputStream).get(CustomObjectSettings.class, "custom");
+        }
     }
 
     @Test
@@ -218,6 +255,31 @@ public class SettingsExampleTest {
                     .withHeader("Header")
                     .withFooter("Footer")
                     .withDebugInfo()
+                    .withDefault("groups.mandatory.int.val", "1")
+                    .writeTo(vsf);
+
+            vsf.print(System.out);
+
+            Config.use(vsf::getAsInputStream).get(ISubSettingsGroups.class, "groups");
+        }
+        System.out.println("-----------------------------------------------------------------------------------------");
+        try (VirtualSettingsFile vsf = new VirtualSettingsFile()) {
+            Example.of(ISubSettingsGroups.class, "groups")
+                    .withHeader("Header")
+                    .withFooter("Footer")
+                    .withDefault("groups.mandatory.int.val", "1")
+                    .writeTo(vsf);
+
+            vsf.print(System.out);
+
+            Config.use(vsf::getAsInputStream).get(ISubSettingsGroups.class, "groups");
+        }
+        System.out.println("-----------------------------------------------------------------------------------------");
+        try (VirtualSettingsFile vsf = new VirtualSettingsFile()) {
+            Example.of(ISubSettingsGroups.class, "groups")
+                    .withHeader("Header")
+                    .withFooter("Footer")
+                    .brief()
                     .withDefault("groups.mandatory.int.val", "1")
                     .writeTo(vsf);
 

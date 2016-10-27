@@ -225,7 +225,7 @@ public class Example {
             if (!optional) {
                 printClass(printStream, propertyName, groupClass, false);
             }
-            printClass(printStream, propertyName + "[.<group name>]", groupClass, true);
+            printClass(printStream, propertyName + "[.<set name>]", groupClass, true);
             if (!brief) {
                 printStream.print("#### ");
                 printStream.print(propertyName);
