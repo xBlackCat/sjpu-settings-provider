@@ -195,7 +195,7 @@ public class SettingsProviderTest {
         final AConfig config = Config.use("/source/combined-settings.properties");
         final CombinedSettings settings = config.get(CombinedSettings.class);
 
-        Assert.assertEquals("1", settings.getSimpleName());
+        Assert.assertEquals(1, settings.getSimpleName());
         Assert.assertEquals(42, settings.getComplexNameWithABBR());
         Assert.assertEquals("Test", settings.getValue());
         Assert.assertEquals("Another", settings.getAnotherValue());
@@ -204,7 +204,7 @@ public class SettingsProviderTest {
         Settings s = conf.get(Settings.class);
         Settings2 s2 = conf.get(Settings2.class);
 
-        Assert.assertEquals("1", s.getSimpleName());
+        Assert.assertEquals(1, s.getSimpleName());
         Assert.assertEquals(42, s.getComplexNameWithABBR());
 
         Assert.assertEquals("Test", s2.getValue());

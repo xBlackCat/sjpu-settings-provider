@@ -19,6 +19,7 @@ public class SettingsExampleTest {
                     .withHeader("Header")
                     .withFooter("Footer")
                     .withDebugInfo()
+                    .withDefault("test1.simple.name", "1")
                     .writeTo(vsf);
 
             vsf.print(System.out);
@@ -33,6 +34,7 @@ public class SettingsExampleTest {
                     .and(Settings.class, "test1")
                     .withHeader("Header")
                     .withFooter("Footer")
+                    .withDefault("test1.simple.name", "1")
                     .writeTo(vsf);
 
             vsf.print(System.out);
@@ -48,6 +50,7 @@ public class SettingsExampleTest {
                     .withHeader("Header")
                     .withFooter("Footer")
                     .brief()
+                    .withDefault("test1.simple.name", "1")
                     .writeTo(vsf);
 
             vsf.print(System.out);
@@ -63,6 +66,7 @@ public class SettingsExampleTest {
                     .withHeader("Header")
                     .withFooter("Footer")
                     .pure()
+                    .withDefault("test1.simple.name", "1")
                     .writeTo(vsf);
 
             vsf.print(System.out);

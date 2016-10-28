@@ -1,7 +1,6 @@
 package org.xblackcat.sjpu.settings;
 
 import org.xblackcat.sjpu.settings.ann.DefaultValue;
-import org.xblackcat.sjpu.settings.ann.Optional;
 import org.xblackcat.sjpu.settings.ann.SettingsSource;
 
 /**
@@ -11,8 +10,7 @@ import org.xblackcat.sjpu.settings.ann.SettingsSource;
  */
 @SettingsSource("/source/settings")
 public interface Settings {
-    @Optional
-    String getSimpleName();
+    int getSimpleName();
 
     @DefaultValue("0")
     int getComplexNameWithABBR();
