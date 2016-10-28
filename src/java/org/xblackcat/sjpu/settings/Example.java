@@ -48,6 +48,7 @@ public class Example {
     private String footer;
     private boolean debugInfo;
     private boolean brief;
+    private boolean pure;
 
     private Example() {
     }
@@ -82,15 +83,39 @@ public class Example {
         return this;
     }
 
+    /**
+     * Put detailed info for each property to the result with references to target methods
+     *
+     * @return this {@linkplain Example} instance
+     */
     public Example withDebugInfo() {
         debugInfo = true;
         brief = false;
+        pure = false;
         return this;
     }
 
+    /**
+     * Do not generate comments and descriptions to properties except footer, header and default values
+     *
+     * @return this {@linkplain Example} instance
+     */
     public Example brief() {
         debugInfo = false;
         brief = true;
+        pure = false;
+        return this;
+    }
+
+    /**
+     * Avoid any kind of comments
+     *
+     * @return this {@linkplain Example} instance
+     */
+    public Example pure() {
+        debugInfo = false;
+        brief = true;
+        pure = true;
         return this;
     }
 
@@ -136,7 +161,7 @@ public class Example {
         }
 
         // Print header
-        if (!brief && printDescription(printStream, header)) {
+        if (!pure && printDescription(printStream, header)) {
             printStream.println();
         }
 
@@ -147,7 +172,7 @@ public class Example {
             printClass(printStream, ci.prefix, ci.clazz, false);
         }
 
-        if (!brief) {
+        if (!pure) {
             printStream.println();
             if (printDescription(printStream, footer)) {
                 printStream.println();
@@ -274,12 +299,20 @@ public class Example {
                         printStream.print(BuilderUtils.getName(m.getGenericReturnType()));
                         printStream.println();
                     }
-                    if (optional || classIsOptional) {
+                    if (!pure && (optional || classIsOptional)) {
                         printStream.println("# (Optional)");
                     }
                 }
 
-                if (optional || classIsOptional || hasDefault && usedDefaultValue) {
+                if (!brief && hasDefault) {
+                    printStream.print("# Default value: ");
+                    printStream.println(defaultValue);
+                }
+                final boolean showDefault = optional || classIsOptional || hasDefault && usedDefaultValue;
+                if (pure && showDefault) {
+                    return;
+                }
+                if (showDefault) {
                     printStream.print('!');
                 }
                 printStream.print(propertyName);
@@ -300,9 +333,9 @@ public class Example {
         return annotation == null ? null : annotation.value();
     }
 
-    private static boolean printDescription(PrintStream printStream, String header) {
-        if (StringUtils.isNotBlank(header)) {
-            for (String line : StringUtils.split(header, "\n\r")) {
+    private static boolean printDescription(PrintStream printStream, String text) {
+        if (StringUtils.isNotBlank(text)) {
+            for (String line : StringUtils.split(text, "\n\r")) {
                 printStream.print("# ");
                 printStream.println(line);
             }
