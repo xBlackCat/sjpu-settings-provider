@@ -68,7 +68,10 @@ public class MutableConfig implements IMutableConfig {
         ISettingsWrapper<T> dw = ClassUtils.initialize(dataWrapper, data);
         loadedObjects.put(new ConfigInfo<>(clazz, prefixName), dw);
 
-        return (T) dw;
+        // Wrapper also implements interface clazz
+        @SuppressWarnings("unchecked")
+        T wrappedData = (T) dw;
+        return wrappedData;
     }
 
     private <T> T loadDataObject(ClassPool pool, Class<T> clazz, String prefixName) throws SettingsException {

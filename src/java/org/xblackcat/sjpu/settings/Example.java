@@ -43,7 +43,7 @@ public class Example {
         return config;
     }
 
-    private final List<ConfigInfo<?>> infos = new ArrayList<>();
+    private final List<ConfigInfo<?>> infoList = new ArrayList<>();
     private final Map<String, String> substitutionValues = new HashMap<>();
     private String header;
     private String footer;
@@ -60,7 +60,7 @@ public class Example {
     }
 
     public <T> Example and(Class<T> clazz, String prefix) {
-        infos.add(new ConfigInfo<>(clazz, prefix));
+        infoList.add(new ConfigInfo<>(clazz, prefix));
         return this;
     }
 
@@ -79,7 +79,7 @@ public class Example {
         return this;
     }
 
-    public Example withDefault(Map<String, String> defaults) {
+    public Example withDefaults(Map<String, String> defaults) {
         substitutionValues.putAll(defaults);
         return this;
     }
@@ -167,7 +167,7 @@ public class Example {
             printStream.println();
         }
 
-        for (ConfigInfo<?> ci : infos) {
+        for (ConfigInfo<?> ci : infoList) {
             if (!brief) {
                 printStream.println("######");
             }

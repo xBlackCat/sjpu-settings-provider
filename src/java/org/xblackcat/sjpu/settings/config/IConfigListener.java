@@ -10,8 +10,8 @@ import java.util.function.Consumer;
  */
 public interface IConfigListener {
     static <T> IConfigListener listen(Class<T> clazz, String prefix, Consumer<T> listener) {
-        return (clazz1, prefix1, newConfig) -> {
-            if (Objects.equals(clazz, clazz1) && Objects.equals(prefix, prefix1)) {
+        return (cl, p, newConfig) -> {
+            if (Objects.equals(clazz, cl) && Objects.equals(prefix, p)) {
                 @SuppressWarnings("unchecked")
                 T config = (T) newConfig;
                 listener.accept(config);
