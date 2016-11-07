@@ -81,7 +81,7 @@ public abstract class AConfig {
      */
     public <T> T get(Class<T> clazz, String prefixName, boolean optional) throws SettingsException {
         if (log.isDebugEnabled()) {
-            log.debug("Load defaults for class " + clazz.getName());
+            log.debug("Load defaults for class " + clazz.getName() + " [prefix: " + prefixName + "]");
         }
 
         ClassPool pool = BuilderUtils.getClassPool(this.pool, clazz);
@@ -112,7 +112,7 @@ public abstract class AConfig {
             }
         }
 
-        List<Object> values = ClassUtils.buildConstructorParameters(pool, clazz, loadedProperties, prefixName);
+        List<Object> values = ClassUtils.buildConstructorParameters(pool, clazz, prefixName, loadedProperties);
 
         return ClassUtils.initialize(c, values);
     }

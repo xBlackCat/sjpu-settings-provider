@@ -6,6 +6,7 @@ import org.apache.commons.logging.LogFactory;
 import org.xblackcat.sjpu.builder.BuilderUtils;
 import org.xblackcat.sjpu.settings.ann.*;
 import org.xblackcat.sjpu.settings.ann.Optional;
+import org.xblackcat.sjpu.settings.config.ConfigInfo;
 import org.xblackcat.sjpu.settings.converter.IParser;
 import org.xblackcat.sjpu.settings.util.ClassUtils;
 import org.xblackcat.sjpu.util.function.SupplierEx;
@@ -169,7 +170,7 @@ public class Example {
             if (!brief) {
                 printStream.println("######");
             }
-            printClass(printStream, ci.prefix, ci.clazz, false);
+            printClass(printStream, ci.getPrefix(), ci.getClazz(), false);
         }
 
         if (!pure) {
@@ -343,15 +344,5 @@ public class Example {
         }
 
         return false;
-    }
-
-    private static class ConfigInfo<T> {
-        private final Class<T> clazz;
-        private final String prefix;
-
-        private ConfigInfo(Class<T> clazz, String prefix) {
-            this.clazz = clazz;
-            this.prefix = prefix;
-        }
     }
 }

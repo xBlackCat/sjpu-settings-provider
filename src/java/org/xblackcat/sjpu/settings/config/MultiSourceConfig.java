@@ -5,7 +5,9 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.xblackcat.sjpu.settings.util.IValueGetter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -26,32 +28,33 @@ public class MultiSourceConfig extends AConfig {
 
     @Override
     protected IValueGetter loadProperties() throws IOException {
-        final IValueGetter[] loadedProperties = new IValueGetter[sources.length];
-        int i = 0;
-        while (i < sources.length) {
-            loadedProperties[i] = sources[i].loadProperties();
-            i++;
+        final List<IValueGetter> loadedProperties = new ArrayList<>(sources.length);
+        for (AConfig source : sources) {
+            if (source != null) {
+                final IValueGetter valueGetter = source.loadProperties();
+                if (valueGetter != null) {
+                    loadedProperties.add(valueGetter);
+                }
+            }
         }
 
         return new MultiSourceValueGetter(loadedProperties);
     }
 
     private static class MultiSourceValueGetter implements IValueGetter {
-        private final IValueGetter[] loadedProperties;
+        private final List<IValueGetter> loadedProperties;
         private final Set<String> keySet = new HashSet<>();
 
-        public MultiSourceValueGetter(IValueGetter[] loadedProperties) {
+        public MultiSourceValueGetter(List<IValueGetter> loadedProperties) {
             this.loadedProperties = loadedProperties;
         }
 
         @Override
         public String get(String key) {
             for (IValueGetter getter : loadedProperties) {
-                if (getter != null) {
-                    String value = getter.get(key);
-                    if (value != null) {
-                        return value;
-                    }
+                String value = getter.get(key);
+                if (value != null) {
+                    return value;
                 }
             }
             return null;

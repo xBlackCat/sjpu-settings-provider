@@ -2,15 +2,27 @@ package org.xblackcat.sjpu.settings;
 
 import javassist.ClassClassPath;
 import javassist.ClassPool;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.xblackcat.sjpu.settings.ann.SettingsSource;
 import org.xblackcat.sjpu.settings.config.*;
+import org.xblackcat.sjpu.settings.util.LoadUtils;
 import org.xblackcat.sjpu.util.function.SupplierEx;
+import org.xblackcat.sjpu.util.thread.CustomNameThreadFactory;
 
 import java.io.File;
+import java.io.IOError;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.nio.file.Path;
+import java.nio.file.*;
+import java.util.*;
+import java.util.concurrent.Executor;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * 14.04.2014 15:22
@@ -19,6 +31,28 @@ import java.nio.file.Path;
  */
 public final class Config {
     private final static PoolHolder POOL_HOLDER = new PoolHolder();
+
+    private static final SettingsWatchingDaemon WATCHING_DAEMON;
+    private static final Executor notifyExecutor;
+
+    static {
+        try {
+            WATCHING_DAEMON = new SettingsWatchingDaemon();
+            final Thread thread = new Thread(WATCHING_DAEMON, "Settings Watching Daemon");
+            thread.setDaemon(true);
+            thread.start();
+        } catch (IOException e) {
+            throw new IOError(e);
+        }
+        notifyExecutor = new ThreadPoolExecutor(
+                0,
+                15,
+                60L,
+                TimeUnit.SECONDS,
+                new SynchronousQueue<>(),
+                new CustomNameThreadFactory("notify-thread", "SettingsNotifier")
+        );
+    }
 
     private Config() {
     }
@@ -40,7 +74,7 @@ public final class Config {
             throw new NullPointerException("File can't be null");
         }
 
-        return use(() -> InputStreamConfig.getInputStream(file));
+        return use(() -> LoadUtils.getInputStream(file));
     }
 
     /**
@@ -54,7 +88,7 @@ public final class Config {
             throw new NullPointerException("File can't be null");
         }
 
-        return use(() -> InputStreamConfig.getInputStream(file));
+        return use(() -> LoadUtils.getInputStream(file));
     }
 
     /**
@@ -78,7 +112,7 @@ public final class Config {
      * @return config reader
      */
     public static AConfig use(String resourceName) {
-        return use(() -> InputStreamConfig.buildInputStreamProvider(resourceName));
+        return use(() -> LoadUtils.buildInputStreamProvider(resourceName));
     }
 
     /**
@@ -92,11 +126,11 @@ public final class Config {
     }
 
     public static AConfig useEnv() {
-        return new EnvConfig(Config.POOL_HOLDER.pool);
+        return new EnvConfig(POOL_HOLDER.pool);
     }
 
     public static AConfig useJvm() {
-        return new JvmConfig(Config.POOL_HOLDER.pool);
+        return new JvmConfig(POOL_HOLDER.pool);
     }
 
     public static AConfig anyOf(AConfig... sources) {
@@ -141,6 +175,10 @@ public final class Config {
         return use(clazz).get(clazz);
     }
 
+    public static IMutableConfig track(Path file) throws IOException {
+        return new MutableConfig(POOL_HOLDER.pool, WATCHING_DAEMON, file);
+    }
+
     private static final class PoolHolder {
         private final ClassPool pool;
         private final ClassLoader classLoader = new ClassLoader(Config.class.getClassLoader()) {
@@ -154,6 +192,101 @@ public final class Config {
                 }
             };
             pool.appendClassPath(new ClassClassPath(AConfig.class));
+        }
+    }
+
+    private final static class SettingsWatchingDaemon implements Runnable, IWatchingDaemon {
+        private static final Log log = LogFactory.getLog(SettingsWatchingDaemon.class);
+
+        private final WatchService watchService = FileSystems.getDefault().newWatchService();
+        private final Map<WatchKey, List<MutableConfig>> trackers = new WeakHashMap<>();
+        private final ReadWriteLock lock = new ReentrantReadWriteLock();
+
+        @Override
+        public void watch(Path file, MutableConfig mutableConfig) throws IOException {
+            final WatchKey watchKey = file.getParent().register(
+                    watchService,
+                    StandardWatchEventKinds.ENTRY_CREATE,
+                    StandardWatchEventKinds.ENTRY_MODIFY
+            );
+
+            lock.writeLock().lock();
+            try {
+                trackers.computeIfAbsent(watchKey, k -> new ArrayList<>()).add(mutableConfig);
+            } finally {
+                lock.writeLock().unlock();
+            }
+
+
+        }
+
+        @Override
+        public void postNotify(Runnable event) {
+            notifyExecutor.execute(() -> {
+                try {
+                    event.run();
+                } catch (Throwable e) {
+                    log.error("Failed to process notify", e);
+                }
+            });
+        }
+
+        private SettingsWatchingDaemon() throws IOException {
+        }
+
+        @Override
+        public void run() {
+            for (; ; ) {
+                final WatchKey key;
+                try {
+                    key = watchService.take();
+                } catch (InterruptedException e) {
+                    return;
+                }
+
+                if (!key.isValid()) {
+                    lock.writeLock().lock();
+                    try {
+                        trackers.remove(key);
+                    } finally {
+                        lock.writeLock().unlock();
+                    }
+
+                    continue;
+                }
+
+                final List<MutableConfig> configs;
+                lock.readLock().lock();
+                try {
+                    configs = trackers.get(key);
+                } finally {
+                    lock.readLock().unlock();
+                }
+
+                if (configs != null) {
+                    Set<Path> paths = new HashSet<>();
+                    for (WatchEvent<?> event : key.pollEvents()) {
+                        WatchEvent.Kind<?> kind = event.kind();
+                        if (kind == StandardWatchEventKinds.OVERFLOW) {
+                            continue;
+                        }
+
+                        Path filename = getContext(event);
+
+                        paths.add(filename);
+                    }
+
+                    for (MutableConfig c : configs) {
+                        c.checkPaths(paths);
+                    }
+                }
+                key.reset();
+            }
+        }
+
+        @SuppressWarnings("unchecked")
+        private static <T> T getContext(WatchEvent<?> event) {
+            return ((WatchEvent<T>) event).context();
         }
     }
 }

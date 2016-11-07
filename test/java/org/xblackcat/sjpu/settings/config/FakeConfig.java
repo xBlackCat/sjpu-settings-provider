@@ -2,6 +2,7 @@ package org.xblackcat.sjpu.settings.config;
 
 import javassist.ClassPool;
 import org.xblackcat.sjpu.settings.util.IValueGetter;
+import org.xblackcat.sjpu.settings.util.LoadUtils;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -22,6 +23,6 @@ public class FakeConfig extends AConfig {
         final Map<String, String> properties = new HashMap<>();
         properties.put("not.annotated", "true");
         properties.put("wrong.annotated", "true");
-        return new MapWrapper(properties);
+        return LoadUtils.wrap(properties);
     }
 }

@@ -11,10 +11,13 @@ import org.xblackcat.sjpu.settings.NotImplementedException;
 import org.xblackcat.sjpu.settings.SettingsException;
 import org.xblackcat.sjpu.settings.ann.*;
 import org.xblackcat.sjpu.settings.ann.Optional;
+import org.xblackcat.sjpu.settings.config.ISettingsWrapper;
 import org.xblackcat.sjpu.settings.converter.IParser;
 
 import java.lang.reflect.*;
 import java.util.*;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -63,8 +66,7 @@ public class ClassUtils {
     public static <T> List<Object> buildConstructorParameters(
             ClassPool pool,
             Class<T> clazz,
-            IValueGetter properties,
-            String prefixName
+            String prefixName, IValueGetter properties
     ) throws SettingsException {
         List<Object> values = new ArrayList<>();
 
@@ -108,7 +110,7 @@ public class ClassUtils {
 
                         @SuppressWarnings("unchecked") final Constructor<?> c = getSettingsConstructor(returnType, pool);
 
-                        value = initialize(c, buildConstructorParameters(pool, returnType, properties, propertyName));
+                        value = initialize(c, buildConstructorParameters(pool, returnType, propertyName, properties));
                     } else {
                         String valueStr = getStringValue(properties, prefixName, method);
 
@@ -199,6 +201,30 @@ public class ClassUtils {
         return constructor;
     }
 
+    public static synchronized <T> Constructor<ISettingsWrapper<T>> getSettingsWrapperConstructor(
+            Class<T> clazz,
+            ClassPool pool
+    ) throws SettingsException {
+        final String implName = clazz.getName() + "$Wrapper";
+        Class<?> aClass;
+        try {
+            aClass = Class.forName(implName, true, pool.getClassLoader());
+        } catch (ClassNotFoundException e) {
+            try {
+                CtClass settingsClass = buildSettingsWrapperClass(clazz, pool);
+                aClass = settingsClass.toClass();
+                settingsClass.detach();
+            } catch (CannotCompileException ee) {
+                throw new SettingsException("Can't initialize a constructor for generated class " + clazz.getName(), ee);
+            }
+        }
+
+        // A class with a single constructor has been generated
+        @SuppressWarnings({"unchecked", "UnnecessaryLocalVariable"})
+        final Constructor<ISettingsWrapper<T>> constructor = (Constructor<ISettingsWrapper<T>>) aClass.getConstructors()[0];
+        return constructor;
+    }
+
     private static <T> CtClass buildSettingsClass(Class<T> clazz, ClassPool pool) throws SettingsException {
         if (!clazz.isInterface()) {
             throw new SettingsException("Only annotated interfaces are supported. " + clazz.getName() + " is a class.");
@@ -252,28 +278,7 @@ public class ClassUtils {
             }
 
             if (m.isAnnotationPresent(Ignore.class)) {
-                final CtClass retType;
-                try {
-                    retType = pool.get(returnType.getName());
-                } catch (NotFoundException e) {
-                    throw new SettingsException("Somehow a class " + returnType.getName() + " can't be found", e);
-                }
-
-                try {
-                    final CtMethod dumbMethod = CtNewMethod.make(
-                            Modifier.FINAL | Modifier.PUBLIC,
-                            retType,
-                            mName,
-                            BuilderUtils.toCtClasses(pool, m.getParameterTypes()),
-                            BuilderUtils.toCtClasses(pool, m.getExceptionTypes()),
-                            "{ throw new " + NotImplementedException.class.getName() + "(\"Method " + mName +
-                                    " is excluded from generation\"); }",
-                            settingsClass
-                    );
-                    settingsClass.addMethod(dumbMethod);
-                } catch (NotFoundException | CannotCompileException e) {
-                    throw new SettingsException("Can't add a dumb method " + mName + " to generated class", e);
-                }
+                addIgnoredImplementation(pool, settingsClass, m, mName, returnType);
                 continue;
             }
 
@@ -357,7 +362,7 @@ public class ClassUtils {
                 equalsBody.append(")");
             } else if (returnType.isPrimitive() || returnType.isEnum()) {
                 equalsBody.append(fieldName);
-                equalsBody.append(" == ");
+                equalsBody.append(" == that.");
                 equalsBody.append(fieldName);
                 equalsBody.append("");
             } else {
@@ -462,6 +467,225 @@ public class ClassUtils {
             throw new SettingsException("Can't generate a constructor for generated class " + clazz.getName(), e);
         } catch (NotFoundException e) {
             throw new SettingsException("Can't generate toString() method for generated class " + clazz.getName(), e);
+        }
+    }
+
+    private static <T> CtClass buildSettingsWrapperClass(Class<T> clazz, ClassPool pool) throws SettingsException {
+        if (!clazz.isInterface()) {
+            throw new SettingsException("Only annotated interfaces are supported. " + clazz.getName() + " is a class.");
+        }
+
+        final CtClass settingsClass;
+        final CtClass settingsInterface;
+        try {
+            settingsInterface = pool.get(clazz.getName());
+            settingsClass = settingsInterface.makeNestedClass("Wrapper", true);
+            settingsClass.addInterface(settingsInterface);
+            settingsClass.addInterface(BuilderUtils.toCtClass(pool, ISettingsWrapper.class));
+        } catch (NotFoundException e) {
+            throw new SettingsException("Can't generate class for settings", e);
+        }
+
+        try {
+            {
+                CtField f = new CtField(pool.get(ReadWriteLock.class.getName()), "__lock", settingsClass);
+                f.setModifiers(Modifier.FINAL | Modifier.PRIVATE);
+                settingsClass.addField(f);
+            }
+
+            {
+                CtField f = new CtField(settingsInterface, "__config", settingsClass);
+                f.setModifiers(Modifier.PRIVATE | Modifier.VOLATILE);
+                settingsClass.addField(f);
+            }
+        } catch (CannotCompileException | NotFoundException e) {
+            throw new SettingsException("Can't initialize fields in class for settings", e);
+        }
+
+        for (Method m : clazz.getMethods()) {
+            final String mName = m.getName();
+            final Class<?> returnType = m.getReturnType();
+
+            if (m.isDefault()) {
+                if (log.isTraceEnabled()) {
+                    log.trace("Ignore default method " + m + " in interface " + clazz.getName());
+                }
+                continue;
+            }
+
+            if (m.isAnnotationPresent(Ignore.class)) {
+                addIgnoredImplementation(pool, settingsClass, m, mName, returnType);
+                continue;
+            }
+
+            if (m.getParameterTypes().length > 0) {
+                throw new SettingsException("Method " + m.toString() + " has parameters - can't be processed as getter");
+            }
+
+            final CtClass retType;
+            try {
+                retType = pool.get(returnType.getName());
+            } catch (NotFoundException e) {
+                throw new SettingsException("Somehow a class " + returnType.getName() + " can't be found", e);
+            }
+
+            try {
+                final String body = "{\n" +
+                        "this.__lock.readLock().lock();\n" +
+                        "try {\n" +
+                        "return ($r) this." + mName + "()" + ";\n" +
+                        "} finally {\n" +
+                        "this.__lock.readLock().unlock();\n" +
+                        "}\n" +
+                        "}";
+
+                if (log.isTraceEnabled()) {
+                    log.trace("Implement method " + clazz.getName() + "#" + mName + "() " + body);
+                }
+
+                final CtMethod proxy = CtNewMethod.make(
+                        Modifier.FINAL | Modifier.PUBLIC,
+                        retType,
+                        mName,
+                        BuilderUtils.EMPTY_LIST,
+                        BuilderUtils.EMPTY_LIST,
+                        body,
+                        settingsClass
+                );
+                settingsClass.addMethod(proxy);
+            } catch (CannotCompileException e) {
+                throw new SettingsException("Can't add a proxy method " + mName + " to generated class", e);
+            }
+        }
+
+
+        String toStringBody = "{\n" +
+                "this.__lock.readLock().lock();\n" +
+                "try {\n" +
+                "return \"" + clazz.getSimpleName() + " wrapper of \" + this.__config.toString();\n" +
+                "} finally {\n" +
+                "this.__lock.readLock().unlock();\n" +
+                "}\n" +
+                "}";
+        String constructorBody = "{\n" +
+                "this.__config = $1;\n" +
+                "this.__lock = new " + BuilderUtils.getName(ReentrantReadWriteLock.class) + "();\n" +
+                "}";
+        String getterBody = "{\n" +
+                "this.__lock.readLock().lock();\n" +
+                "try {\n" +
+                "return ($r) this.__config;\n" +
+                "} finally {\n" +
+                "this.__lock.readLock().unlock();\n" +
+                "}\n" +
+                "}";
+        String setterBody = "{\n" +
+                "this.__lock.writeLock().lock();\n" +
+                "try {\n" +
+                "this.__config = $1;\n" +
+                "} finally {\n" +
+                "this.__lock.writeLock().unlock();\n" +
+                "}\n" +
+                "}";
+
+        try {
+            if (log.isTraceEnabled()) {
+                log.trace("Generated setter " + clazz.getName() + "#setConfig() " + setterBody);
+            }
+
+            final CtMethod setter = CtNewMethod.make(
+                    Modifier.FINAL | Modifier.PUBLIC,
+                    pool.get(void.class.getName()),
+                    "setConfig",
+                    new CtClass[]{pool.get(Object.class.getName())},
+                    BuilderUtils.EMPTY_LIST,
+                    setterBody,
+                    settingsClass
+            );
+
+            settingsClass.addMethod(setter);
+
+            if (log.isTraceEnabled()) {
+                log.trace("Generated getter " + clazz.getName() + "#getConfig() " + toStringBody);
+            }
+
+            final CtMethod getter = CtNewMethod.make(
+                    Modifier.FINAL | Modifier.PUBLIC,
+                    pool.get(Object.class.getName()),
+                    "getConfig",
+                    BuilderUtils.EMPTY_LIST,
+                    BuilderUtils.EMPTY_LIST,
+                    getterBody,
+                    settingsClass
+            );
+
+            settingsClass.addMethod(getter);
+
+            if (log.isTraceEnabled()) {
+                log.trace("Generated method " + clazz.getName() + "#toString() " + toStringBody);
+            }
+
+            final CtMethod toString = CtNewMethod.make(
+                    Modifier.FINAL | Modifier.PUBLIC,
+                    pool.get(String.class.getName()),
+                    "toString",
+                    BuilderUtils.EMPTY_LIST,
+                    BuilderUtils.EMPTY_LIST,
+                    toStringBody,
+                    settingsClass
+            );
+
+            settingsClass.addMethod(toString);
+
+            if (log.isTraceEnabled()) {
+                log.trace("Generated constructor " + clazz.getName() + "() " + constructorBody);
+            }
+
+            final CtConstructor constructor = CtNewConstructor.make(
+                    new CtClass[]{settingsInterface},
+                    BuilderUtils.EMPTY_LIST,
+                    constructorBody,
+                    settingsClass
+            );
+
+            settingsClass.addConstructor(constructor);
+
+            return settingsClass;
+        } catch (CannotCompileException e) {
+            throw new SettingsException("Can't generate a constructor for generated class " + clazz.getName(), e);
+        } catch (NotFoundException e) {
+            throw new SettingsException("Can't generate toString() method for generated class " + clazz.getName(), e);
+        }
+    }
+
+    private static void addIgnoredImplementation(
+            ClassPool pool,
+            CtClass settingsClass,
+            Method m,
+            String mName,
+            Class<?> returnType
+    ) throws SettingsException {
+        final CtClass retType;
+        try {
+            retType = pool.get(returnType.getName());
+        } catch (NotFoundException e) {
+            throw new SettingsException("Somehow a class " + returnType.getName() + " can't be found", e);
+        }
+
+        try {
+            final CtMethod dumbMethod = CtNewMethod.make(
+                    Modifier.FINAL | Modifier.PUBLIC,
+                    retType,
+                    mName,
+                    BuilderUtils.toCtClasses(pool, m.getParameterTypes()),
+                    BuilderUtils.toCtClasses(pool, m.getExceptionTypes()),
+                    "{ throw new " + NotImplementedException.class.getName() + "(\"Method " + mName +
+                            " is excluded from generation\"); }",
+                    settingsClass
+            );
+            settingsClass.addMethod(dumbMethod);
+        } catch (NotFoundException | CannotCompileException e) {
+            throw new SettingsException("Can't add a dumb method " + mName + " to generated class", e);
         }
     }
 
@@ -860,16 +1084,20 @@ public class ClassUtils {
                 realPrefix = propertyName;
             }
 
-            result.put(p, initialize(c, buildConstructorParameters(pool, clazz, properties, realPrefix)));
+            result.put(p, initialize(c, buildConstructorParameters(pool, clazz, realPrefix, properties)));
         }
 
         return Collections.unmodifiableMap(result);
     }
 
     public static <T> T initialize(Constructor<T> c, List<Object> values) throws SettingsException {
+        final Object[] array = values.stream().toArray();
+        return initialize(c, array);
+    }
+
+    public static <T> T initialize(Constructor<T> c, Object... values) throws SettingsException {
         try {
-            final Object[] array = values.toArray(new Object[values.size()]);
-            return c.newInstance(array);
+            return c.newInstance(values);
         } catch (InstantiationException e) {
             throw new SettingsException("Can't make a new instance of my own class :(", e);
         } catch (IllegalAccessException e) {
