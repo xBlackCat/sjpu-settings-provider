@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 
 /**
  * 03.11.2016 15:03
@@ -32,17 +33,16 @@ public class MutableConfig implements IMutableConfig {
     private final Path file;
     private final Path parent;
     private final AConfig wrappedConfig;
-    private final IWatchingDaemon watchingDaemon;
+    private final Consumer<Runnable> notifyConsumer;
 
     private volatile IValueGetter loadedProperties;
 
-    public MutableConfig(ClassPool pool, IWatchingDaemon watchingDaemon, Path file) throws IOException {
+    public MutableConfig(ClassPool pool, Consumer<Runnable> notifyConsumer, Path file) throws IOException {
         this.pool = pool;
         this.file = file;
         parent = file.getParent();
 
-        this.watchingDaemon = watchingDaemon;
-        this.watchingDaemon.watch(file, this);
+        this.notifyConsumer = notifyConsumer;
         wrappedConfig = new InputStreamConfig(pool, () -> LoadUtils.getInputStream(file));
     }
 
@@ -104,13 +104,20 @@ public class MutableConfig implements IMutableConfig {
     }
 
     private void reloadConfigs() {
-        IValueGetter properties = null;
+        final IValueGetter properties;
         try {
             properties = wrappedConfig.loadProperties();
+            if (properties == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("No data is loaded - ignore reload event");
+                }
+                return;
+            }
         } catch (IOException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Failed to load properties - ignore reload event", e);
             }
+            return;
         }
 
         lock.lock();
@@ -148,7 +155,7 @@ public class MutableConfig implements IMutableConfig {
                     updateObject(wrapper, data);
 
                     for (IConfigListener l : listenerList) {
-                        watchingDaemon.postNotify(() -> l.onConfigChanged(configInfo.getClazz(), configInfo.getPrefix(), data));
+                        notifyConsumer.accept(() -> l.onConfigChanged(configInfo.getClazz(), configInfo.getPrefix(), data));
                     }
                 } catch (Throwable ex) {
                     log.debug("Failed to parse properties - ignore request", ex);

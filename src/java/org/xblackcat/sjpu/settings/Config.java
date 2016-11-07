@@ -54,6 +54,16 @@ public final class Config {
         );
     }
 
+    private static void postNotify(Runnable event) {
+        notifyExecutor.execute(() -> {
+            try {
+                event.run();
+            } catch (Throwable e) {
+                SettingsWatchingDaemon.log.error("Failed to process notify", e);
+            }
+        });
+    }
+
     private Config() {
     }
 
@@ -176,7 +186,9 @@ public final class Config {
     }
 
     public static IMutableConfig track(Path file) throws IOException {
-        return new MutableConfig(POOL_HOLDER.pool, WATCHING_DAEMON, file);
+        MutableConfig config = new MutableConfig(POOL_HOLDER.pool, Config::postNotify, file);
+        WATCHING_DAEMON.watch(file, config);
+        return config;
     }
 
     private static final class PoolHolder {
@@ -195,15 +207,14 @@ public final class Config {
         }
     }
 
-    private final static class SettingsWatchingDaemon implements Runnable, IWatchingDaemon {
+    private final static class SettingsWatchingDaemon implements Runnable {
         private static final Log log = LogFactory.getLog(SettingsWatchingDaemon.class);
 
         private final WatchService watchService = FileSystems.getDefault().newWatchService();
         private final Map<WatchKey, List<MutableConfig>> trackers = new WeakHashMap<>();
         private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
-        @Override
-        public void watch(Path file, MutableConfig mutableConfig) throws IOException {
+        private void watch(Path file, MutableConfig mutableConfig) throws IOException {
             final WatchKey watchKey = file.getParent().register(
                     watchService,
                     StandardWatchEventKinds.ENTRY_CREATE,
@@ -218,17 +229,6 @@ public final class Config {
             }
 
 
-        }
-
-        @Override
-        public void postNotify(Runnable event) {
-            notifyExecutor.execute(() -> {
-                try {
-                    event.run();
-                } catch (Throwable e) {
-                    log.error("Failed to process notify", e);
-                }
-            });
         }
 
         private SettingsWatchingDaemon() throws IOException {
