@@ -154,7 +154,8 @@ public class Example {
      * Saves generated example of configs to specified print stream. Print stream remains open.
      *
      * @param printStream print stream for generated data
-     * @throws IOException
+     * @throws IOException       thrown if generated config can't be saved
+     * @throws SettingsException thrown if config can't be generated
      */
     public void writeTo(PrintStream printStream) throws IOException, SettingsException {
         if (printStream == null) {
