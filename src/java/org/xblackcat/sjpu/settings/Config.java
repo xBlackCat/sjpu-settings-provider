@@ -235,13 +235,6 @@ public final class Config {
         private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
         private IMutableConfig watch(Path file) throws IOException {
-            final WatchKey watchKey = file.getParent().register(
-                    watchService,
-                    StandardWatchEventKinds.ENTRY_CREATE,
-                    StandardWatchEventKinds.ENTRY_MODIFY,
-                    StandardWatchEventKinds.ENTRY_DELETE
-            );
-
             lock.writeLock().lock();
             try {
                 MutableConfig config = trackedFiles.get(file);
@@ -250,6 +243,13 @@ public final class Config {
                 }
 
                 MutableConfig newConfig = new MutableConfig(POOL_HOLDER.pool, file, Config::postNotify);
+                final WatchKey watchKey = file.getParent().register(
+                        watchService,
+                        StandardWatchEventKinds.ENTRY_CREATE,
+                        StandardWatchEventKinds.ENTRY_MODIFY,
+                        StandardWatchEventKinds.ENTRY_DELETE
+                );
+
                 trackers.computeIfAbsent(watchKey, k -> new ArrayList<>()).add(newConfig);
                 trackedFiles.put(file, newConfig);
                 return newConfig;
