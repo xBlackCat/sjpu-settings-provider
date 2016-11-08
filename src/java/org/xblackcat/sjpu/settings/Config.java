@@ -200,9 +200,7 @@ public final class Config {
             throw EXCEPTION;
         }
 
-        MutableConfig config = new MutableConfig(POOL_HOLDER.pool, file, Config::postNotify);
-        WATCHING_DAEMON.watch(file, config);
-        return config;
+        return WATCHING_DAEMON.watch(file);
     }
 
     public static IMutableConfig track(File file) throws IOException, UnsupportedOperationException {
@@ -232,10 +230,11 @@ public final class Config {
         private static final Log log = LogFactory.getLog(SettingsWatchingDaemon.class);
 
         private final WatchService watchService = FileSystems.getDefault().newWatchService();
+        private final Map<Path, MutableConfig> trackedFiles = new WeakHashMap<>();
         private final Map<WatchKey, List<MutableConfig>> trackers = new WeakHashMap<>();
         private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
-        private void watch(Path file, MutableConfig mutableConfig) throws IOException {
+        private IMutableConfig watch(Path file) throws IOException {
             final WatchKey watchKey = file.getParent().register(
                     watchService,
                     StandardWatchEventKinds.ENTRY_CREATE,
@@ -245,7 +244,15 @@ public final class Config {
 
             lock.writeLock().lock();
             try {
-                trackers.computeIfAbsent(watchKey, k -> new ArrayList<>()).add(mutableConfig);
+                MutableConfig config = trackedFiles.get(file);
+                if (config != null) {
+                    return config;
+                }
+
+                MutableConfig newConfig = new MutableConfig(POOL_HOLDER.pool, file, Config::postNotify);
+                trackers.computeIfAbsent(watchKey, k -> new ArrayList<>()).add(newConfig);
+                trackedFiles.put(file, newConfig);
+                return newConfig;
             } finally {
                 lock.writeLock().unlock();
             }
