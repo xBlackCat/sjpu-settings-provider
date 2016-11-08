@@ -79,20 +79,12 @@ public class MutableConfig implements IMutableConfig {
         try {
             @SuppressWarnings("unchecked") final Constructor<T> c = ClassUtils.getSettingsConstructor(clazz, pool);
 
-            if (loadedProperties == null) {
-                try {
-                    loadedProperties = wrappedConfig.loadProperties();
-                } catch (IOException e) {
-                    throw new SettingsException("Can't obtain list of values for class " + clazz, e);
-                }
+            loadedProperties = reloadFile();
 
-                if (loadedProperties == null) {
-                    // Values are not loaded
-                    if (ClassUtils.allMethodsHaveDefaults(clazz)) {
-                        loadedProperties = IValueGetter.EMPTY; // Avoid NPE
-                    } else {
-                        throw new SettingsException(clazz.getName() + " has mandatory properties without default values");
-                    }
+            if (loadedProperties == IValueGetter.EMPTY) {
+                // Values are not loaded
+                if (!ClassUtils.allMethodsHaveDefaults(clazz)) {
+                    throw new SettingsException(clazz.getName() + " has mandatory properties without default values");
                 }
             }
 
@@ -107,21 +99,7 @@ public class MutableConfig implements IMutableConfig {
     }
 
     private void reloadConfigs() {
-        final IValueGetter properties;
-        try {
-            properties = wrappedConfig.loadProperties();
-            if (properties == null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("No data is loaded - ignore reload event");
-                }
-                return;
-            }
-        } catch (IOException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Failed to load properties - ignore reload event", e);
-            }
-            return;
-        }
+        IValueGetter properties = reloadFile();
 
         lock.lock();
         try {
@@ -167,6 +145,25 @@ public class MutableConfig implements IMutableConfig {
         } finally {
             lock.unlock();
         }
+    }
+
+    private IValueGetter reloadFile() {
+        IValueGetter properties = null;
+        try {
+            properties = wrappedConfig.loadProperties();
+        } catch (IOException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Failed to load properties - try to use defaults", e);
+            }
+        }
+
+        if (properties == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("No data is loaded - try to use defaults");
+            }
+            properties = IValueGetter.EMPTY;
+        }
+        return properties;
     }
 
     @SuppressWarnings("unchecked")

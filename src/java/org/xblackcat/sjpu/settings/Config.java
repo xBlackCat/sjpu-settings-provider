@@ -218,7 +218,8 @@ public final class Config {
             final WatchKey watchKey = file.getParent().register(
                     watchService,
                     StandardWatchEventKinds.ENTRY_CREATE,
-                    StandardWatchEventKinds.ENTRY_MODIFY
+                    StandardWatchEventKinds.ENTRY_MODIFY,
+                    StandardWatchEventKinds.ENTRY_DELETE
             );
 
             lock.writeLock().lock();
@@ -227,8 +228,6 @@ public final class Config {
             } finally {
                 lock.writeLock().unlock();
             }
-
-
         }
 
         private SettingsWatchingDaemon() throws IOException {

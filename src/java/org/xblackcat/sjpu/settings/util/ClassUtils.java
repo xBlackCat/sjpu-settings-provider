@@ -66,7 +66,8 @@ public class ClassUtils {
     public static <T> List<Object> buildConstructorParameters(
             ClassPool pool,
             Class<T> clazz,
-            String prefixName, IValueGetter properties
+            String prefixName,
+            IValueGetter properties
     ) throws SettingsException {
         List<Object> values = new ArrayList<>();
 
@@ -286,10 +287,10 @@ public class ClassUtils {
                 throw new SettingsException("Method " + m.toString() + " has parameters - can't be processed as getter");
             }
 
-            final String fieldName = "__" + BuilderUtils.makeFieldName(mName);
+            String fieldName = BuilderUtils.makeFieldName(mName);
 
             if (log.isTraceEnabled()) {
-                log.trace("Generate a field " + fieldName + " for class " + clazz.getName() + " of type " + returnType.getName());
+                log.trace("Generate a property " + fieldName + " for class " + clazz.getName() + " of type " + returnType.getName());
             }
 
             final CtClass retType;
@@ -301,15 +302,15 @@ public class ClassUtils {
 
             final boolean returnTypeArray = returnType.isArray();
             try {
-                CtField f = new CtField(retType, fieldName, settingsClass);
+                CtField f = new CtField(retType, "__" + fieldName, settingsClass);
                 f.setModifiers(Modifier.FINAL | Modifier.PRIVATE);
                 settingsClass.addField(f);
 
                 final String body;
                 if (returnTypeArray) {
-                    body = "{ return ($r) this." + fieldName + ".clone()" + "; }";
+                    body = "{ return ($r) this.__" + fieldName + ".clone()" + "; }";
                 } else {
-                    body = "{ return this." + fieldName + "" + "; }";
+                    body = "{ return this.__" + fieldName +  "; }";
                 }
 
                 if (log.isTraceEnabled()) {
@@ -327,14 +328,14 @@ public class ClassUtils {
                 );
                 settingsClass.addMethod(getter);
             } catch (CannotCompileException e) {
-                throw new SettingsException("Can't add a field " + fieldName + " to generated class", e);
+                throw new SettingsException("Can't add a field __" + fieldName + " to generated class", e);
             }
 
             if (returnTypeArray) {
                 constructorBody.append("if ($");
                 constructorBody.append(idx);
                 constructorBody.append(" != null) {\n");
-                constructorBody.append("this.");
+                constructorBody.append("this.__");
                 constructorBody.append(fieldName);
                 constructorBody.append(" = (");
                 constructorBody.append(BuilderUtils.getName(returnType));
@@ -342,11 +343,11 @@ public class ClassUtils {
                 constructorBody.append(idx);
                 constructorBody.append(".clone();\n");
                 constructorBody.append("} else {\n");
-                constructorBody.append("this.");
+                constructorBody.append("this.__");
                 constructorBody.append(fieldName);
                 constructorBody.append(" = null;\n}\n");
             } else {
-                constructorBody.append("this.");
+                constructorBody.append("this.__");
                 constructorBody.append(fieldName);
                 constructorBody.append(" = $");
                 constructorBody.append(idx);
@@ -355,30 +356,31 @@ public class ClassUtils {
 
             equalsBody.append(" &&\n");
             if (returnTypeArray) {
-                equalsBody.append("java.util.Arrays.equals(");
+                equalsBody.append("java.util.Arrays.equals(__");
                 equalsBody.append(fieldName);
-                equalsBody.append(", that.");
+                equalsBody.append(", that.__");
                 equalsBody.append(fieldName);
                 equalsBody.append(")");
             } else if (returnType.isPrimitive() || returnType.isEnum()) {
+                equalsBody.append("__");
                 equalsBody.append(fieldName);
-                equalsBody.append(" == that.");
+                equalsBody.append(" == that.__");
                 equalsBody.append(fieldName);
                 equalsBody.append("");
             } else {
-                equalsBody.append("java.util.Objects.equals(");
+                equalsBody.append("java.util.Objects.equals(__");
                 equalsBody.append(fieldName);
-                equalsBody.append(", that.");
+                equalsBody.append(", that.__");
                 equalsBody.append(fieldName);
                 equalsBody.append(")");
             }
-            fieldNames.add("($w)" + fieldName);
+            fieldNames.add("($w) __" + fieldName);
 
             toStringBody.append(" + \"");
             toStringBody.append(fieldName);
             toStringBody.append(" (");
             toStringBody.append(buildPropertyName(null, m));
-            toStringBody.append(") = \\\"\" + java.lang.String.valueOf(this.");
+            toStringBody.append(") = \\\"\" + java.lang.String.valueOf(this.__");
             toStringBody.append(fieldName);
             toStringBody.append(") + \"\\\"; \"");
 
@@ -856,7 +858,7 @@ public class ClassUtils {
             } else {
                 collection = new LinkedHashSet<>(values.length);
             }
-        } else if (returnRawType.equals(List.class) || returnRawType.equals(List.class)) {
+        } else if (returnRawType.equals(List.class) || returnRawType.equals(Collection.class)) {
             if (values == null || values.length == 0) {
                 return Collections.emptyList();
             }
