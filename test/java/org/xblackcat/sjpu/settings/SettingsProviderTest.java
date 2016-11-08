@@ -5,8 +5,8 @@ import org.apache.commons.lang3.StringEscapeUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.xblackcat.sjpu.settings.ann.Optional;
-import org.xblackcat.sjpu.settings.config.AConfig;
 import org.xblackcat.sjpu.settings.config.FakeConfig;
+import org.xblackcat.sjpu.settings.config.IConfig;
 import org.xblackcat.sjpu.settings.util.ClassUtils;
 
 import java.io.IOException;
@@ -192,7 +192,7 @@ public class SettingsProviderTest {
 
     @Test
     public void combinedSettings() throws SettingsException, IOException {
-        final AConfig config = Config.use("/source/combined-settings.properties");
+        final IConfig config = Config.use("/source/combined-settings.properties");
         final CombinedSettings settings = config.get(CombinedSettings.class);
 
         Assert.assertEquals(1, settings.getSimpleName());
@@ -200,7 +200,7 @@ public class SettingsProviderTest {
         Assert.assertEquals("Test", settings.getValue());
         Assert.assertEquals("Another", settings.getAnotherValue());
 
-        AConfig conf = Config.use("/source/combined-settings.properties");
+        IConfig conf = Config.use("/source/combined-settings.properties");
         Settings s = conf.get(Settings.class);
         Settings2 s2 = conf.get(Settings2.class);
 
@@ -250,10 +250,10 @@ public class SettingsProviderTest {
         map1.put(Numbers.Nine, "Test-9");
 
         Map<Long, Numbers> map2 = new HashMap<>();
-        map2.put(2l, Numbers.Two);
-        map2.put(3l, Numbers.Three);
-        map2.put(4l, Numbers.Four);
-        map2.put(5l, Numbers.Five);
+        map2.put(2L, Numbers.Two);
+        map2.put(3L, Numbers.Three);
+        map2.put(4L, Numbers.Four);
+        map2.put(5L, Numbers.Five);
 
         Assert.assertEquals(map1, settings.getNumberMap());
         Assert.assertEquals(map2, settings.getOtherNumberMap());
@@ -286,10 +286,10 @@ public class SettingsProviderTest {
         map1.put(Numbers.Nine, "Test-9");
 
         Map<Long, Numbers> map2 = new HashMap<>();
-        map2.put(2l, Numbers.Two);
-        map2.put(3l, Numbers.Three);
-        map2.put(4l, Numbers.Four);
-        map2.put(5l, Numbers.Five);
+        map2.put(2L, Numbers.Two);
+        map2.put(3L, Numbers.Three);
+        map2.put(4L, Numbers.Four);
+        map2.put(5L, Numbers.Five);
 
         Assert.assertEquals(map1, settings.getNumberMap());
         Assert.assertEquals(map2, settings.getOtherNumberMap());
@@ -297,7 +297,7 @@ public class SettingsProviderTest {
 
     @Test
     public void invalidComplexSettings() throws IOException {
-        AConfig conf = new FakeConfig(new ClassPool(true));
+        IConfig conf = new FakeConfig(new ClassPool(true));
         try {
             conf.get(InvalidComplexSettings1.class);
             Assert.fail("Exception expected");

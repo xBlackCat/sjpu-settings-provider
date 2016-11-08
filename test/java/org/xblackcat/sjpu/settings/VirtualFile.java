@@ -7,8 +7,8 @@ import java.io.*;
  *
  * @author xBlackCat
  */
-public class VirtualSettingsFile extends PrintStream {
-    public VirtualSettingsFile() {
+public class VirtualFile extends PrintStream {
+    public VirtualFile() {
         super(new ByteArrayOutputStream());
     }
 

@@ -10,10 +10,16 @@ import java.util.Objects;
 public class ConfigInfo<T> {
     private final Class<T> clazz;
     private final String prefix;
+    private final boolean optional;
 
     public ConfigInfo(Class<T> clazz, String prefix) {
+        this(clazz, prefix, false);
+    }
+
+    public ConfigInfo(Class<T> clazz, String prefix, boolean optional) {
         this.clazz = clazz;
         this.prefix = prefix;
+        this.optional = optional;
     }
 
     public Class<T> getClazz() {
@@ -22,6 +28,10 @@ public class ConfigInfo<T> {
 
     public String getPrefix() {
         return prefix;
+    }
+
+    public boolean isOptional() {
+        return optional;
     }
 
     @Override

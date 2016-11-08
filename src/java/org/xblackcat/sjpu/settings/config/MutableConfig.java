@@ -1,11 +1,8 @@
 package org.xblackcat.sjpu.settings.config;
 
 import javassist.ClassPool;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.xblackcat.sjpu.builder.BuilderUtils;
 import org.xblackcat.sjpu.settings.SettingsException;
-import org.xblackcat.sjpu.settings.ann.Prefix;
 import org.xblackcat.sjpu.settings.util.ClassUtils;
 import org.xblackcat.sjpu.settings.util.IValueGetter;
 import org.xblackcat.sjpu.settings.util.LoadUtils;
@@ -23,22 +20,19 @@ import java.util.function.Consumer;
  *
  * @author xBlackCat
  */
-public class MutableConfig implements IMutableConfig {
-    private static final Log log = LogFactory.getLog(MutableConfig.class);
-
+public class MutableConfig extends AConfig implements IMutableConfig {
     private final Lock lock = new ReentrantLock();
     private final List<IConfigListener> listenerList = new ArrayList<>();
     private final Map<ConfigInfo<?>, ISettingsWrapper<?>> loadedObjects = new HashMap<>();
-    private final ClassPool pool;
     private final Path file;
     private final Path parent;
-    private final AConfig wrappedConfig;
+    private final APermanentConfig wrappedConfig;
     private final Consumer<Runnable> notifyConsumer;
 
     private volatile IValueGetter loadedProperties;
 
     public MutableConfig(ClassPool pool, Consumer<Runnable> notifyConsumer, Path file) throws IOException {
-        this.pool = pool;
+        super(pool);
         this.file = file;
         parent = file.getParent();
 
@@ -47,55 +41,62 @@ public class MutableConfig implements IMutableConfig {
     }
 
     @Override
-    public <T> T get(Class<T> clazz) throws SettingsException {
-        final Prefix prefixAnn = clazz.getAnnotation(Prefix.class);
-        return get(clazz, prefixAnn != null ? prefixAnn.value() : "");
-    }
-
-
-    @Override
-    public <T> T get(Class<T> clazz, String prefixName) throws SettingsException {
+    public <T> T get(Class<T> clazz, String prefixName, boolean optional) throws SettingsException {
         if (log.isDebugEnabled()) {
             log.debug("Initialize mutable config for class " + clazz.getName() + " [prefix: " + prefixName + "]");
         }
 
         ClassPool pool = BuilderUtils.getClassPool(this.pool, clazz);
 
-        T data = loadDataObject(pool, clazz, prefixName);
-
-        Constructor<ISettingsWrapper<T>> dataWrapper = ClassUtils.getSettingsWrapperConstructor(clazz, pool);
-
-        ISettingsWrapper<T> dw = ClassUtils.initialize(dataWrapper, data);
-        loadedObjects.put(new ConfigInfo<>(clazz, prefixName), dw);
-
-        // Wrapper also implements interface clazz
-        @SuppressWarnings("unchecked")
-        T wrappedData = (T) dw;
-        return wrappedData;
-    }
-
-    private <T> T loadDataObject(ClassPool pool, Class<T> clazz, String prefixName) throws SettingsException {
+        ConfigInfo<T> configInfo = new ConfigInfo<>(clazz, prefixName, optional);
         lock.lock();
         try {
-            @SuppressWarnings("unchecked") final Constructor<T> c = ClassUtils.getSettingsConstructor(clazz, pool);
-
-            loadedProperties = reloadFile();
-
-            if (loadedProperties == IValueGetter.EMPTY) {
-                // Values are not loaded
-                if (!ClassUtils.allMethodsHaveDefaults(clazz)) {
-                    throw new SettingsException(clazz.getName() + " has mandatory properties without default values");
-                }
+            @SuppressWarnings("unchecked")
+            T wrapper = (T)loadedObjects.get(configInfo);
+            if (wrapper != null) {
+                return wrapper;
             }
 
-            IValueGetter loadedProperties = this.loadedProperties;
-            List<Object> values = ClassUtils.buildConstructorParameters(pool, clazz, prefixName, loadedProperties);
+            IValueGetter properties;
+            if (loadedProperties == null) {
+                properties = reloadFile();
+                loadedProperties = properties;
+            } else {
+                properties = loadedProperties;
+            }
 
-            return ClassUtils.initialize(c, values);
+            T object = initObject(pool, configInfo, properties);
+
+            Constructor<ISettingsWrapper<T>> dataWrapper = ClassUtils.getSettingsWrapperConstructor(clazz, pool);
+
+            final ISettingsWrapper<T> dw = ClassUtils.initialize(dataWrapper, object);
+            loadedObjects.put(configInfo, dw);
+
+            // Wrapper also implements interface clazz
+            @SuppressWarnings("unchecked")
+            final T wrappedData = (T) dw;
+            return wrappedData;
         } finally {
             lock.unlock();
         }
+    }
 
+    private <T> T initObject(ClassPool pool, ConfigInfo<T> configInfo, IValueGetter loadedProperties) throws SettingsException {
+        Class<T> clazz = configInfo.getClazz();
+        String prefixName = configInfo.getPrefix();
+        boolean optional = configInfo.isOptional();
+
+        try {
+            @SuppressWarnings("unchecked") final Constructor<T> c = ClassUtils.getSettingsConstructor(clazz, pool);
+            List<Object> values = ClassUtils.buildConstructorParameters(pool, clazz, prefixName, loadedProperties);
+
+            return ClassUtils.initialize(c, values);
+        } catch (SettingsException e) {
+            if (optional) {
+                return null;
+            }
+            throw e;
+        }
     }
 
     private void reloadConfigs() {
@@ -104,26 +105,14 @@ public class MutableConfig implements IMutableConfig {
         lock.lock();
         try {
             loadedProperties = properties;
-        } finally {
-            lock.unlock();
-        }
 
-        lock.lock();
-        try {
             for (Map.Entry<ConfigInfo<?>, ISettingsWrapper<?>> e : loadedObjects.entrySet()) {
                 try {
                     ConfigInfo<?> configInfo = e.getKey();
                     ISettingsWrapper wrapper = e.getValue();
+                    Class<?> clazz = configInfo.getClazz();
 
-                    final Constructor<?> c = ClassUtils.getSettingsConstructor(configInfo.getClazz(), pool);
-                    List<Object> values = ClassUtils.buildConstructorParameters(
-                            pool,
-                            configInfo.getClazz(),
-                            configInfo.getPrefix(),
-                            loadedProperties
-                    );
-
-                    Object data = ClassUtils.initialize(c, values);
+                    final Object data = initObject(pool, configInfo, properties);
 
                     Object oldData = wrapper.getConfig();
                     if (Objects.equals(data, oldData)) {
@@ -136,7 +125,7 @@ public class MutableConfig implements IMutableConfig {
                     updateObject(wrapper, data);
 
                     for (IConfigListener l : listenerList) {
-                        notifyConsumer.accept(() -> l.onConfigChanged(configInfo.getClazz(), configInfo.getPrefix(), data));
+                        notifyConsumer.accept(() -> l.onConfigChanged(clazz, configInfo.getPrefix(), data));
                     }
                 } catch (Throwable ex) {
                     log.debug("Failed to parse properties - ignore request", ex);

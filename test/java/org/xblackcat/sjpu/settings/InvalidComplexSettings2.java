@@ -2,7 +2,7 @@ package org.xblackcat.sjpu.settings;
 
 import org.xblackcat.sjpu.settings.ann.CollectionOf;
 
-import java.util.Collection;
+import java.util.ArrayList;
 
 /**
  * 15.10.13 18:06
@@ -11,5 +11,5 @@ import java.util.Collection;
  */
 public interface InvalidComplexSettings2 {
     @CollectionOf(String.class)
-    Collection<String> wrongAnnotated();
+    ArrayList<String> wrongAnnotated();
 }

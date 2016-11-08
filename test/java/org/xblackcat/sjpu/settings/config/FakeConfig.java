@@ -13,7 +13,7 @@ import java.util.Map;
  *
  * @author xBlackCat
  */
-public class FakeConfig extends AConfig {
+public class FakeConfig extends APermanentConfig {
     public FakeConfig(ClassPool pool) {
         super(pool);
     }

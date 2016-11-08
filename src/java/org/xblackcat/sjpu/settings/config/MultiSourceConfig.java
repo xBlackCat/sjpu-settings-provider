@@ -5,36 +5,38 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.xblackcat.sjpu.settings.util.IValueGetter;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 12.12.2014 19:01
  *
  * @author xBlackCat
  */
-public class MultiSourceConfig extends AConfig {
-    private final AConfig[] sources;
+public class MultiSourceConfig extends APermanentConfig {
+    private final APermanentConfig[] sources;
 
-    public MultiSourceConfig(ClassPool pool, AConfig... sources) {
+    public MultiSourceConfig(ClassPool pool, IConfig... sources) {
         super(pool);
         if (ArrayUtils.isEmpty(sources)) {
             throw new IllegalArgumentException("Please, specify at least one source");
         }
-        this.sources = sources;
+        this.sources = Arrays.stream(sources)
+                .filter(c -> c instanceof APermanentConfig)
+                .map(c -> (APermanentConfig) c)
+                .toArray(APermanentConfig[]::new);
+
+        if (ArrayUtils.isEmpty(this.sources)) {
+            throw new IllegalArgumentException("Please, specify at least one source: Mutable config is not supported");
+        }
     }
 
     @Override
     protected IValueGetter loadProperties() throws IOException {
         final List<IValueGetter> loadedProperties = new ArrayList<>(sources.length);
-        for (AConfig source : sources) {
-            if (source != null) {
-                final IValueGetter valueGetter = source.loadProperties();
-                if (valueGetter != null) {
-                    loadedProperties.add(valueGetter);
-                }
+        for (APermanentConfig source : sources) {
+            final IValueGetter valueGetter = source.loadProperties();
+            if (valueGetter != null) {
+                loadedProperties.add(valueGetter);
             }
         }
 

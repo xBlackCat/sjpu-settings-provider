@@ -34,16 +34,23 @@ public final class Config {
 
     private static final SettingsWatchingDaemon WATCHING_DAEMON;
     private static final Executor notifyExecutor;
+    private static final UnsupportedOperationException EXCEPTION;
 
     static {
+        SettingsWatchingDaemon daemon = null;
+        UnsupportedOperationException ex = null;
         try {
-            WATCHING_DAEMON = new SettingsWatchingDaemon();
-            final Thread thread = new Thread(WATCHING_DAEMON, "Settings Watching Daemon");
+            daemon = new SettingsWatchingDaemon();
+            final Thread thread = new Thread(daemon, "Settings Watching Daemon");
             thread.setDaemon(true);
             thread.start();
         } catch (IOException e) {
             throw new IOError(e);
+        } catch (UnsupportedOperationException e) {
+            ex = e;
         }
+        EXCEPTION = ex;
+        WATCHING_DAEMON = daemon;
         notifyExecutor = new ThreadPoolExecutor(
                 0,
                 15,
@@ -71,7 +78,7 @@ public final class Config {
      * Initializes specified class with default values if any. A {@linkplain org.xblackcat.sjpu.settings.SettingsException} will be thrown
      * if the specified interface has methods without {@linkplain org.xblackcat.sjpu.settings.ann.DefaultValue} annotation
      */
-    public static final AConfig Defaults = new DefaultConfig(POOL_HOLDER.pool);
+    public static final IConfig Defaults = new DefaultConfig(POOL_HOLDER.pool);
 
     /**
      * Builds a config reader from .properties file specified by {@linkplain java.io.File File} object.
@@ -79,7 +86,7 @@ public final class Config {
      * @param file .properties file.
      * @return config reader
      */
-    public static AConfig use(File file) {
+    public static IConfig use(File file) {
         if (file == null) {
             throw new NullPointerException("File can't be null");
         }
@@ -93,7 +100,7 @@ public final class Config {
      * @param file .properties file.
      * @return config reader
      */
-    public static AConfig use(Path file) {
+    public static IConfig use(Path file) {
         if (file == null) {
             throw new NullPointerException("File can't be null");
         }
@@ -107,7 +114,7 @@ public final class Config {
      * @param url url to .properties file.
      * @return config reader
      */
-    public static AConfig use(URL url) {
+    public static IConfig use(URL url) {
         if (url == null) {
             throw new NullPointerException("Url should be set");
         }
@@ -121,7 +128,7 @@ public final class Config {
      * @param resourceName resource name.
      * @return config reader
      */
-    public static AConfig use(String resourceName) {
+    public static IConfig use(String resourceName) {
         return use(() -> LoadUtils.buildInputStreamProvider(resourceName));
     }
 
@@ -131,19 +138,19 @@ public final class Config {
      * @param inputStreamSupplier input stream provider with all the
      * @return config reader
      */
-    public static AConfig use(SupplierEx<InputStream, IOException> inputStreamSupplier) {
+    public static IConfig use(SupplierEx<InputStream, IOException> inputStreamSupplier) {
         return new InputStreamConfig(POOL_HOLDER.pool, inputStreamSupplier);
     }
 
-    public static AConfig useEnv() {
+    public static IConfig useEnv() {
         return new EnvConfig(POOL_HOLDER.pool);
     }
 
-    public static AConfig useJvm() {
+    public static IConfig useJvm() {
         return new JvmConfig(POOL_HOLDER.pool);
     }
 
-    public static AConfig anyOf(AConfig... sources) {
+    public static IConfig anyOf(IConfig... sources) {
         return new MultiSourceConfig(POOL_HOLDER.pool, sources);
     }
 
@@ -155,7 +162,7 @@ public final class Config {
      * @throws org.xblackcat.sjpu.settings.SettingsException if interface methods are not annotated or interface is not annotated with
      *                                                       {@linkplain org.xblackcat.sjpu.settings.ann.SettingsSource @SettingsSource}
      */
-    public static AConfig use(Class<?> clazz) throws SettingsException {
+    public static IConfig use(Class<?> clazz) throws SettingsException {
         final SettingsSource sourceAnn = clazz.getAnnotation(SettingsSource.class);
 
         if (sourceAnn == null) {
@@ -186,9 +193,23 @@ public final class Config {
     }
 
     public static IMutableConfig track(Path file) throws IOException {
+        if (file == null) {
+            throw new NullPointerException("File can't be null");
+        }
+        if (EXCEPTION != null) {
+            throw EXCEPTION;
+        }
+
         MutableConfig config = new MutableConfig(POOL_HOLDER.pool, Config::postNotify, file);
         WATCHING_DAEMON.watch(file, config);
         return config;
+    }
+
+    public static IMutableConfig track(File file) throws IOException {
+        if (file == null) {
+            throw new NullPointerException("File can't be null");
+        }
+        return track(file.toPath());
     }
 
     private static final class PoolHolder {
@@ -203,7 +224,7 @@ public final class Config {
                     return classLoader;
                 }
             };
-            pool.appendClassPath(new ClassClassPath(AConfig.class));
+            pool.appendClassPath(new ClassClassPath(IConfig.class));
         }
     }
 

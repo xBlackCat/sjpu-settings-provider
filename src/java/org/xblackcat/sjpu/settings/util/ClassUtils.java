@@ -8,6 +8,7 @@ import org.apache.commons.logging.LogFactory;
 import org.xblackcat.sjpu.builder.BuilderUtils;
 import org.xblackcat.sjpu.settings.NoPropertyException;
 import org.xblackcat.sjpu.settings.NotImplementedException;
+import org.xblackcat.sjpu.settings.NotLoadedException;
 import org.xblackcat.sjpu.settings.SettingsException;
 import org.xblackcat.sjpu.settings.ann.*;
 import org.xblackcat.sjpu.settings.ann.Optional;
@@ -31,6 +32,7 @@ public class ClassUtils {
 
     private static final String DEFAULT_DELIMITER = ",";
     private static final String DEFAULT_SPLITTER = ":";
+    private static final String NOT_LOADED_EXCEPTION_CLASS = BuilderUtils.getName(NotLoadedException.class);
 
     public static String buildPropertyName(String prefixName, Method m) {
         StringBuilder propertyNameBuilder = new StringBuilder();
@@ -310,7 +312,7 @@ public class ClassUtils {
                 if (returnTypeArray) {
                     body = "{ return ($r) this.__" + fieldName + ".clone()" + "; }";
                 } else {
-                    body = "{ return this.__" + fieldName +  "; }";
+                    body = "{ return this.__" + fieldName + "; }";
                 }
 
                 if (log.isTraceEnabled()) {
@@ -535,7 +537,10 @@ public class ClassUtils {
                 final String body = "{\n" +
                         "this.__lock.readLock().lock();\n" +
                         "try {\n" +
-                        "return ($r) this." + mName + "()" + ";\n" +
+                        "if (this.__config == null) {\n" +
+                        "throw new " + NOT_LOADED_EXCEPTION_CLASS + "(\"Optional config " + clazz.getName() + " is not loaded\");\n" +
+                        "}\n" +
+                        "return ($r) this.__config." + mName + "()" + ";\n" +
                         "} finally {\n" +
                         "this.__lock.readLock().unlock();\n" +
                         "}\n" +
@@ -564,7 +569,7 @@ public class ClassUtils {
         String toStringBody = "{\n" +
                 "this.__lock.readLock().lock();\n" +
                 "try {\n" +
-                "return \"" + clazz.getSimpleName() + " wrapper of \" + this.__config.toString();\n" +
+                "return \"" + clazz.getSimpleName() + " wrapper of \" + String.valueOf(this.__config);\n" +
                 "} finally {\n" +
                 "this.__lock.readLock().unlock();\n" +
                 "}\n" +
@@ -608,7 +613,7 @@ public class ClassUtils {
             settingsClass.addMethod(setter);
 
             if (log.isTraceEnabled()) {
-                log.trace("Generated getter " + clazz.getName() + "#getConfig() " + toStringBody);
+                log.trace("Generated getter " + clazz.getName() + "#getConfig() " + getterBody);
             }
 
             final CtMethod getter = CtNewMethod.make(
@@ -845,6 +850,7 @@ public class ClassUtils {
 
         String[] values = StringUtils.splitByWholeSeparator(arrayString, delimiter);
         final Collection collection;
+        final boolean isSet;
         final boolean isList;
         if (returnRawType.equals(Set.class)) {
             if (values == null || values.length == 0) {
@@ -852,6 +858,7 @@ public class ClassUtils {
             }
 
             isList = false;
+            isSet = true;
 
             if (Enum.class.isAssignableFrom(targetType)) {
                 collection = EnumSet.noneOf((Class<Enum>) targetType);
@@ -863,13 +870,14 @@ public class ClassUtils {
                 return Collections.emptyList();
             }
 
-            isList = true;
+            isList = returnRawType.equals(List.class);
+            isSet = false;
 
             collection = new ArrayList<>(values.length);
         } else {
             throw new SettingsException(
-                    "Please, specify container by interface " + Collection.class.getName() + ", " + List.class.getName() + " or "
-                            + Set.class.getName() + " as return type for collections."
+                    "Please, specify container by interface " + Collection.class.getName() + ", " + List.class.getName() + " or " +
+                            Set.class.getName() + " as return type for collections."
             );
         }
 
@@ -898,8 +906,10 @@ public class ClassUtils {
 
         if (isList) {
             return Collections.unmodifiableList((List<?>) collection);
-        } else {
+        } else if (isSet) {
             return Collections.unmodifiableSet((Set<?>) collection);
+        } else {
+            return Collections.unmodifiableCollection((Collection<?>) collection);
         }
     }
 

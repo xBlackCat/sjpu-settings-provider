@@ -3,6 +3,7 @@ package org.xblackcat.sjpu.settings;
 import org.xblackcat.sjpu.settings.ann.DefaultValue;
 import org.xblackcat.sjpu.settings.ann.Optional;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -23,7 +24,7 @@ public interface SettingsOptional {
     Numbers getOneDefault();
 
     @Optional
-    List<Numbers> getNoNumbers();
+    Collection<Numbers> getNoNumbers();
 
     @DefaultValue("")
     List<Numbers> getEmptyNumbers();

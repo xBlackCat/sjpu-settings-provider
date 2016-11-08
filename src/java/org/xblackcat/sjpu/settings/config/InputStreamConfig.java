@@ -13,7 +13,7 @@ import java.io.InputStream;
  *
  * @author xBlackCat
  */
-public class InputStreamConfig extends AConfig {
+public class InputStreamConfig extends APermanentConfig {
     private final SupplierEx<InputStream, IOException> inputStreamProvider;
 
     public InputStreamConfig(ClassPool pool, SupplierEx<InputStream, IOException> inputStreamProvider) {

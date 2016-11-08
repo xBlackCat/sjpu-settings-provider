@@ -10,7 +10,7 @@ import java.io.IOException;
  *
  * @author xBlackCat
  */
-public class DefaultConfig extends AConfig {
+public class DefaultConfig extends APermanentConfig {
     public DefaultConfig(ClassPool pool) {
         super(pool);
     }

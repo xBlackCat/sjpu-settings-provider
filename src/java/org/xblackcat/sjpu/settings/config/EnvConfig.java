@@ -11,7 +11,7 @@ import java.io.IOException;
  *
  * @author xBlackCat
  */
-public class EnvConfig extends AConfig {
+public class EnvConfig extends APermanentConfig {
     public EnvConfig(ClassPool pool) {
         super(pool);
     }

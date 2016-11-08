@@ -11,7 +11,7 @@ import java.util.Set;
  *
  * @author xBlackCat
  */
-public class JvmConfig extends AConfig {
+public class JvmConfig extends APermanentConfig {
     public JvmConfig(ClassPool pool) {
         super(pool);
     }
