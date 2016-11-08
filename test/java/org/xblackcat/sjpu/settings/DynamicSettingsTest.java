@@ -1,5 +1,6 @@
 package org.xblackcat.sjpu.settings;
 
+import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.xblackcat.sjpu.settings.config.IConfigListener;
@@ -17,20 +18,21 @@ import java.util.concurrent.TimeUnit;
  *
  * @author xBlackCat
  */
-@Ignore
 public class DynamicSettingsTest {
     @Test
     public void workflow() throws IOException, InterruptedException {
         final Path file = Paths.get("R:/settings/1.properties");
         final Path file1 = Paths.get("R:/settings/1.properties");
         final Path file2 = Paths.get("R:/settings/2.properties");
-        Config.track(file);
-        Config.track(file1);
-        Config.track(file2);
-        Thread.sleep(200000);
-        file.getParent();
+        IMutableConfig track = Config.track(file);
+        IMutableConfig track1 = Config.track(file1);
+        IMutableConfig track2 = Config.track(file2);
+        Assert.assertSame(track, track1);
+        Assert.assertNotSame(track2, track1);
+        Assert.assertNotSame(track, track2);
     }
 
+    @Ignore
     @Test
     public void workflow2() throws IOException, InterruptedException, SettingsException {
         final Path file = Paths.get("R:/settings/1.properties");
@@ -82,6 +84,7 @@ public class DynamicSettingsTest {
         Thread.sleep(200000);
     }
 
+    @Ignore
     @Test
     public void workflow3() throws IOException, InterruptedException, SettingsException {
         final Path file = Paths.get("R:/settings/1.properties");
