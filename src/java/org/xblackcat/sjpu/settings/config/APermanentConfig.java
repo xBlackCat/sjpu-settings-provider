@@ -1,6 +1,8 @@
 package org.xblackcat.sjpu.settings.config;
 
 import javassist.ClassPool;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.xblackcat.sjpu.builder.BuilderUtils;
 import org.xblackcat.sjpu.settings.SettingsException;
 import org.xblackcat.sjpu.settings.util.ClassUtils;
@@ -15,11 +17,13 @@ import java.util.List;
  *
  * @author xBlackCat
  */
-abstract class APermanentConfig extends AConfig {
+abstract class APermanentConfig implements IConfig {
+    protected final Log log = LogFactory.getLog(getClass());
+    protected final ClassPool pool;
     private IValueGetter loadedProperties;
 
     APermanentConfig(ClassPool pool) {
-        super(pool);
+        this.pool = pool;
     }
 
     /**

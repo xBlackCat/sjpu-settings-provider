@@ -1,6 +1,8 @@
 package org.xblackcat.sjpu.settings.config;
 
 import javassist.ClassPool;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.xblackcat.sjpu.builder.BuilderUtils;
 import org.xblackcat.sjpu.settings.SettingsException;
 import org.xblackcat.sjpu.settings.util.ClassUtils;
@@ -20,7 +22,10 @@ import java.util.function.Consumer;
  *
  * @author xBlackCat
  */
-public class MutableConfig extends AConfig implements IMutableConfig {
+public class MutableConfig implements IMutableConfig, IConfig {
+    private static final Log log = LogFactory.getLog(MutableConfig.class);
+
+    protected final ClassPool pool;
     private final Lock lock = new ReentrantLock();
     private final List<IConfigListener> listenerList = new ArrayList<>();
     private final Map<ConfigInfo<?>, ISettingsWrapper<?>> loadedObjects = new HashMap<>();
@@ -31,8 +36,8 @@ public class MutableConfig extends AConfig implements IMutableConfig {
 
     private volatile IValueGetter loadedProperties;
 
-    public MutableConfig(ClassPool pool, Consumer<Runnable> notifyConsumer, Path file) throws IOException {
-        super(pool);
+    public MutableConfig(ClassPool pool, Path file, Consumer<Runnable> notifyConsumer) {
+        this.pool = pool;
         this.file = file;
         parent = file.getParent();
 
@@ -52,7 +57,7 @@ public class MutableConfig extends AConfig implements IMutableConfig {
         lock.lock();
         try {
             @SuppressWarnings("unchecked")
-            T wrapper = (T)loadedObjects.get(configInfo);
+            T wrapper = (T) loadedObjects.get(configInfo);
             if (wrapper != null) {
                 return wrapper;
             }

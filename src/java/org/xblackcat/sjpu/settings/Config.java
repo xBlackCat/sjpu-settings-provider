@@ -192,7 +192,7 @@ public final class Config {
         return use(clazz).get(clazz);
     }
 
-    public static IMutableConfig track(Path file) throws IOException {
+    public static IMutableConfig track(Path file) throws IOException, UnsupportedOperationException {
         if (file == null) {
             throw new NullPointerException("File can't be null");
         }
@@ -200,12 +200,12 @@ public final class Config {
             throw EXCEPTION;
         }
 
-        MutableConfig config = new MutableConfig(POOL_HOLDER.pool, Config::postNotify, file);
+        MutableConfig config = new MutableConfig(POOL_HOLDER.pool, file, Config::postNotify);
         WATCHING_DAEMON.watch(file, config);
         return config;
     }
 
-    public static IMutableConfig track(File file) throws IOException {
+    public static IMutableConfig track(File file) throws IOException, UnsupportedOperationException {
         if (file == null) {
             throw new NullPointerException("File can't be null");
         }
