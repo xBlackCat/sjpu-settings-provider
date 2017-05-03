@@ -50,6 +50,7 @@ public class Example {
     private boolean debugInfo;
     private boolean brief;
     private boolean pure;
+    private boolean sortByName = true;
 
     private Example() {
     }
@@ -61,6 +62,16 @@ public class Example {
 
     public <T> Example and(Class<T> clazz, String prefix) {
         infoList.add(new ConfigInfo<>(clazz, prefix));
+        return this;
+    }
+
+    /**
+     * Do not sort properties by name - use declaring methods order in an interface
+     *
+     * @return current {@linkplain Example} object reference to allow do chaining requests
+     */
+    public Example declaringOrder() {
+        this.sortByName = false;
         return this;
     }
 
@@ -167,7 +178,13 @@ public class Example {
             printStream.println();
         }
 
-        for (ConfigInfo<?> ci : infoList) {
+        final ConfigInfo[] configInfos;
+        if (sortByName) {
+            configInfos = infoList.stream().sorted(Comparator.comparing(ConfigInfo::getPrefix)).toArray(ConfigInfo[]::new);
+        } else {
+            configInfos = infoList.toArray(new ConfigInfo[infoList.size()]);
+        }
+        for (ConfigInfo<?> ci : configInfos) {
             if (!brief) {
                 printStream.println("######");
             }
@@ -203,7 +220,17 @@ public class Example {
     }
 
     private void printMethods(PrintStream printStream, Class<?> clazz, String prefix, boolean classIsOptional) throws SettingsException {
-        for (Method m : clazz.getMethods()) {
+        final Collection<Method> methods;
+        if (sortByName) {
+            TreeMap<String, Method> sortedMethods = new TreeMap<>(String::compareTo);
+            for (Method m : clazz.getMethods()) {
+                sortedMethods.put(ClassUtils.buildPropertyName(m), m);
+            }
+            methods = sortedMethods.values();
+        } else {
+            methods = Arrays.asList(clazz.getMethods());
+        }
+        for (Method m : methods) {
             printMethod(printStream, clazz, prefix, m, classIsOptional);
         }
     }

@@ -34,6 +34,10 @@ public class ClassUtils {
     private static final String DEFAULT_SPLITTER = ":";
     private static final String NOT_LOADED_EXCEPTION_CLASS = BuilderUtils.getName(NotLoadedException.class);
 
+    public static String buildPropertyName(Method m) {
+        return buildPropertyName(null, m);
+    }
+
     public static String buildPropertyName(String prefixName, Method m) {
         StringBuilder propertyNameBuilder = new StringBuilder();
         if (StringUtils.isNotBlank(prefixName)) {
@@ -199,8 +203,7 @@ public class ClassUtils {
         }
 
         // A class with a single constructor has been generated
-        @SuppressWarnings({"unchecked", "UnnecessaryLocalVariable"})
-        final Constructor<T> constructor = (Constructor<T>) aClass.getConstructors()[0];
+        @SuppressWarnings({"unchecked", "UnnecessaryLocalVariable"}) final Constructor<T> constructor = (Constructor<T>) aClass.getConstructors()[0];
         return constructor;
     }
 
@@ -223,8 +226,7 @@ public class ClassUtils {
         }
 
         // A class with a single constructor has been generated
-        @SuppressWarnings({"unchecked", "UnnecessaryLocalVariable"})
-        final Constructor<ISettingsWrapper<T>> constructor = (Constructor<ISettingsWrapper<T>>) aClass.getConstructors()[0];
+        @SuppressWarnings({"unchecked", "UnnecessaryLocalVariable"}) final Constructor<ISettingsWrapper<T>> constructor = (Constructor<ISettingsWrapper<T>>) aClass.getConstructors()[0];
         return constructor;
     }
 

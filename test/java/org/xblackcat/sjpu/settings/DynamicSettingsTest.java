@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit;
  * @author xBlackCat
  */
 public class DynamicSettingsTest {
+    @Ignore
     @Test
     public void workflow() throws IOException, InterruptedException {
         final Path file = Paths.get("R:/settings/1.properties");
