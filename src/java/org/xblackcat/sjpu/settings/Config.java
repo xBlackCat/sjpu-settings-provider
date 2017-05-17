@@ -10,10 +10,8 @@ import org.xblackcat.sjpu.settings.util.LoadUtils;
 import org.xblackcat.sjpu.util.function.SupplierEx;
 import org.xblackcat.sjpu.util.thread.CustomNameThreadFactory;
 
-import java.io.File;
-import java.io.IOError;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.*;
 import java.util.*;
@@ -190,6 +188,26 @@ public final class Config {
      */
     public static <T> T get(Class<T> clazz) throws SettingsException {
         return use(clazz).get(clazz);
+    }
+
+    public static IMutableConfig track(String resourceName) throws IOException, UnsupportedOperationException {
+        return track(resourceName, Config.class.getClassLoader());
+    }
+
+    public static IMutableConfig track(String resourceName, ClassLoader classLoader) throws IOException, UnsupportedOperationException {
+        try {
+            final URL resource = classLoader.getResource(resourceName);
+            if (resource == null) {
+                throw new FileNotFoundException("Resource " + resourceName + " is not found in class path");
+            }
+            if (!"file".equals(resource.getProtocol())) {
+                throw new IOException("Only resources as local files could be tracked.");
+            }
+            final Path path = Paths.get(resource.toURI());
+            return track(path);
+        } catch (URISyntaxException e) {
+            throw new IOException("Failed to get URI for the resource " + resourceName, e);
+        }
     }
 
     public static IMutableConfig track(Path file) throws IOException, UnsupportedOperationException {
