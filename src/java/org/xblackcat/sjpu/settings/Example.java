@@ -15,8 +15,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.lang.reflect.AnnotatedElement;
-import java.lang.reflect.Method;
+import java.lang.reflect.*;
 import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
@@ -290,6 +289,9 @@ public class Example {
             final boolean showSplitterInfo = Map.class.equals(returnType);
             final boolean showDelimiterInfo = returnType.isArray() || Collection.class.isAssignableFrom(returnType) || showSplitterInfo;
 
+            final Enum<?>[] keyConstants = resolveKeyConstants(m);
+            final Enum<?>[] valueConstants = resolveValueConstants(m);
+
             final IParser<?> parser = ClassUtils.getCustomConverter(m);
             final boolean customObject = parser != null && returnType.isAssignableFrom(parser.getReturnType());
             if (!customObject && returnType.isInterface() && !showSplitterInfo && !showDelimiterInfo) {
@@ -309,13 +311,19 @@ public class Example {
                 final String exampleValue = substitutionValues.getOrDefault(propertyName, defaultValue);
                 if (!brief) {
                     if (parser != null) {
-                        printDescription(printStream, "Value format: " + parser.formatDescription());
+                        printDescription(printStream, "Value format: ", parser.formatDescription());
                     }
                     if (showDelimiterInfo) {
                         printStream.println("# Values delimiter: '" + ClassUtils.getDelimiter(m) + "'");
                     }
                     if (showSplitterInfo) {
                         printStream.println("# Key-value separator: '" + ClassUtils.getSplitter(m) + "'");
+                        if (keyConstants != null) {
+                            printStream.println("# Valid keys for the property are: " + Arrays.toString(keyConstants));
+                        }
+                    }
+                    if (valueConstants != null) {
+                        printStream.println("# Valid values for the property are: " + Arrays.toString(valueConstants));
                     }
 
                     if (debugInfo) {
@@ -357,15 +365,105 @@ public class Example {
         }
     }
 
+    private Enum<?>[] resolveValueConstants(Method m) {
+        final Type grt = m.getGenericReturnType();
+        final Class<?> rt = m.getReturnType();
+
+        final Class<?> valueType;
+        if (rt.isArray()) {
+            valueType = rt.getComponentType();
+        } else if (Collection.class.isAssignableFrom(rt)) {
+            if (!(grt instanceof ParameterizedType)) {
+                return null;
+            }
+
+            ParameterizedType pt = (ParameterizedType) grt;
+            final Type[] ata = pt.getActualTypeArguments();
+            if (ata.length != 1) {
+                // Support only plain collections with only one type parameter
+                return null;
+            }
+
+            final Map<TypeVariable<?>, Class<?>> typeVariables = BuilderUtils.resolveTypeVariables(grt);
+            valueType = BuilderUtils.substituteTypeVariables(typeVariables, ata[0]);
+        } else if (Map.class.equals(rt)) {
+            if (!(grt instanceof ParameterizedType)) {
+                return null;
+            }
+
+            ParameterizedType pt = (ParameterizedType) grt;
+            final Type[] ata = pt.getActualTypeArguments();
+            if (ata.length != 2) {
+                // Support only standart maps with two type parameters
+                return null;
+            }
+
+            final Map<TypeVariable<?>, Class<?>> typeVariables = BuilderUtils.resolveTypeVariables(grt);
+            valueType = BuilderUtils.substituteTypeVariables(typeVariables, ata[1]);
+        } else {
+            valueType = rt;
+        }
+
+        if (valueType.isEnum()) {
+            @SuppressWarnings("unchecked") final Class<Enum<?>> enumClass = (Class<Enum<?>>) valueType;
+            return enumClass.getEnumConstants();
+        }
+        return null;
+    }
+
+    private Enum<?>[] resolveKeyConstants(Method m) {
+        final Type grt = m.getGenericReturnType();
+        final Class<?> rt = m.getReturnType();
+
+        final Class<?> valueType;
+        if (!Map.class.equals(rt)) {
+            return null;
+        }
+
+        if (!(grt instanceof ParameterizedType)) {
+            return null;
+        }
+
+        ParameterizedType pt = (ParameterizedType) grt;
+        final Type[] ata = pt.getActualTypeArguments();
+        if (ata.length != 2) {
+            // Support only standart maps with two type parameters
+            return null;
+        }
+
+        final Map<TypeVariable<?>, Class<?>> typeVariables = BuilderUtils.resolveTypeVariables(grt);
+        valueType = BuilderUtils.substituteTypeVariables(typeVariables, ata[0]);
+        if (valueType.isEnum()) {
+            @SuppressWarnings("unchecked") final Class<Enum<?>> enumClass = (Class<Enum<?>>) valueType;
+            return enumClass.getEnumConstants();
+        }
+        return null;
+    }
+
     private String getDescription(AnnotatedElement e) {
         final Description annotation = e.getAnnotation(Description.class);
         return annotation == null ? null : annotation.value();
     }
 
     private static boolean printDescription(PrintStream printStream, String text) {
+        return printDescription(printStream, "", text);
+    }
+
+    private static boolean printDescription(PrintStream printStream, String prefix, String text) {
+        String padding = null;
         if (StringUtils.isNotBlank(text)) {
+            boolean first = true;
             for (String line : StringUtils.split(text, "\n\r")) {
                 printStream.print("# ");
+                if (first) {
+                    printStream.print(prefix);
+                    first = false;
+                } else {
+                    if (padding == null) {
+                        padding = StringUtils.repeat(' ', prefix.length());
+                    }
+                    printStream.print(padding);
+                }
                 printStream.println(line);
             }
             return true;
