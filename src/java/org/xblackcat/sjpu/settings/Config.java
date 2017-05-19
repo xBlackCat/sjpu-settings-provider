@@ -161,16 +161,7 @@ public final class Config {
      *                                                       {@linkplain org.xblackcat.sjpu.settings.ann.SettingsSource @SettingsSource}
      */
     public static IConfig use(Class<?> clazz) throws SettingsException {
-        final SettingsSource sourceAnn = clazz.getAnnotation(SettingsSource.class);
-
-        if (sourceAnn == null) {
-            throw new SettingsException(
-                    "No default source is specified for " + clazz.getName() + ". Should be specified with @" + SettingsSource.class +
-                            " annotation"
-            );
-        }
-
-        return use(sourceAnn.value());
+        return use(extractSource(clazz));
     }
 
     /**
@@ -188,6 +179,10 @@ public final class Config {
      */
     public static <T> T get(Class<T> clazz) throws SettingsException {
         return use(clazz).get(clazz);
+    }
+
+    public static IMutableConfig track(Class<?> clazz) throws SettingsException, IOException, UnsupportedOperationException {
+        return track(extractSource(clazz), clazz.getClassLoader());
     }
 
     public static IMutableConfig track(String resourceName) throws IOException, UnsupportedOperationException {
@@ -226,6 +221,19 @@ public final class Config {
             throw new NullPointerException("File can't be null");
         }
         return track(file.toPath());
+    }
+
+    private static String extractSource(Class<?> clazz) throws SettingsException {
+        final SettingsSource sourceAnn = clazz.getAnnotation(SettingsSource.class);
+
+        if (sourceAnn == null) {
+            throw new SettingsException(
+                    "No default source is specified for " + clazz.getName() + ". Should be specified with @" + SettingsSource.class +
+                            " annotation"
+            );
+        }
+
+        return sourceAnn.value();
     }
 
     private static final class PoolHolder {
