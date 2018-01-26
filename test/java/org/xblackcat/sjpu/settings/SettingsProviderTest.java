@@ -1,7 +1,7 @@
 package org.xblackcat.sjpu.settings;
 
 import javassist.ClassPool;
-import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.xblackcat.sjpu.settings.ann.Optional;

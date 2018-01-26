@@ -34,7 +34,7 @@ repositories {
 }
 
 dependencies {
-    compile group: 'org.xblackcat.sjpu', name: 'sjpu-rcb', version: '[0.2.2,1.0)'
+    compile group: 'org.xblackcat.sjpu', name: 'sjpu-rcb', version: '[0.3,1.0)'
     compile group: 'org.xblackcat.sjpu', name: 'sjpu-utils', version: '[0.1.5,1.0)'
     testCompile group: 'junit', name: 'junit', version: '[4.12,)'
     testRuntime group: 'org.apache.logging.log4j', name: 'log4j-jcl', version: '[2.4,3.0)'

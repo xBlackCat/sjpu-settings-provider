@@ -17,7 +17,7 @@ public class JvmConfig extends APermanentConfig {
     }
 
     @Override
-    protected IValueGetter loadProperties() throws IOException {
+    protected IValueGetter loadProperties() {
         return new IValueGetter() {
             @Override
             public String get(String key) {
