@@ -22,7 +22,7 @@ public class SubstitutionTest {
             Settings2 s = Config.builder().use("source/substitution-settings.properties").get(Settings2.class, "sub");
 
             Assert.assertEquals("${user.home}", s.getValue());
-            Assert.assertEquals("${sub.value}/${user.name}", s.getAnotherValue());
+            Assert.assertEquals("${user.home}/${user.name}", s.getAnotherValue());
         }
         {
             Settings2 s = Config.builder().substitute(Collections.emptyMap())
@@ -30,7 +30,7 @@ public class SubstitutionTest {
                     .get(Settings2.class, "sub");
 
             Assert.assertEquals("${user.home}", s.getValue());
-            Assert.assertEquals("${sub.value}/${user.name}", s.getAnotherValue());
+            Assert.assertEquals("${user.home}/${user.name}", s.getAnotherValue());
         }
         {
             Settings2 s = Config.builder().substitute(Collections.singletonMap("user.name", "Hello"))
@@ -38,7 +38,7 @@ public class SubstitutionTest {
                     .get(Settings2.class, "sub");
 
             Assert.assertEquals("${user.home}", s.getValue());
-            Assert.assertEquals("${sub.value}/${user.name}", s.getAnotherValue());
+            Assert.assertEquals("${user.home}/Hello", s.getAnotherValue());
         }
         {
             Settings2 s = Config.builder().substitute(Collections.singletonMap("user.name", "${user.home}"))
@@ -46,7 +46,7 @@ public class SubstitutionTest {
                     .get(Settings2.class, "sub");
 
             Assert.assertEquals("${user.home}", s.getValue());
-            Assert.assertEquals("${sub.value}/${user.name}", s.getAnotherValue());
+            Assert.assertEquals("${user.home}/${user.home}", s.getAnotherValue());
         }
         {
             Settings2 s = Config.use("source/substitution-settings.properties")
