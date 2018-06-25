@@ -208,24 +208,28 @@ public final class Config {
         return track(file.toPath());
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
     public static Builder with(String prefix, UnaryOperator<String> valueHandler) {
-        return new Builder().with(prefix, valueHandler);
+        return builder().with(prefix, valueHandler);
     }
 
     public static Builder substitute(Map<String, String> substitution) {
-        return new Builder().substitute(substitution);
+        return builder().substitute(substitution);
     }
 
     public static Builder substituteEnv() {
-        return new Builder().substituteEnv();
+        return builder().substituteEnv();
     }
 
     public static Builder substituteJvm() {
-        return new Builder().substituteJvm();
+        return builder().substituteJvm();
     }
 
     public static Builder substitute(IConfig substitution) {
-        return new Builder().substitute(substitution);
+        return builder().substitute(substitution);
     }
 
     private static String extractSource(Class<?> clazz) throws SettingsException {
