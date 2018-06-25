@@ -2,6 +2,7 @@ package org.xblackcat.sjpu.settings.config;
 
 import javassist.ClassPool;
 import org.apache.commons.lang3.ArrayUtils;
+import org.xblackcat.sjpu.settings.APrefixHandler;
 import org.xblackcat.sjpu.settings.util.IValueGetter;
 
 import java.io.IOException;
@@ -15,8 +16,13 @@ import java.util.*;
 public class MultiSourceConfig extends APermanentConfig {
     private final APermanentConfig[] sources;
 
-    public MultiSourceConfig(ClassPool pool, IConfig... sources) {
-        super(pool);
+    public MultiSourceConfig(
+            ClassPool pool,
+            Map<String, APrefixHandler> prefixHandlers,
+            List<IValueGetter> substitutions,
+            IConfig... sources
+    ) {
+        super(pool, prefixHandlers, substitutions);
         if (ArrayUtils.isEmpty(sources)) {
             throw new IllegalArgumentException("Please, specify at least one source");
         }
@@ -33,7 +39,7 @@ public class MultiSourceConfig extends APermanentConfig {
     @Override
     protected IValueGetter loadProperties() throws IOException {
         final List<IValueGetter> loadedProperties = new ArrayList<>(sources.length);
-        for (APermanentConfig source : sources) {
+        for (APermanentConfig source: sources) {
             final IValueGetter valueGetter = source.loadProperties();
             if (valueGetter != null) {
                 loadedProperties.add(valueGetter);
@@ -53,7 +59,7 @@ public class MultiSourceConfig extends APermanentConfig {
 
         @Override
         public String get(String key) {
-            for (IValueGetter getter : loadedProperties) {
+            for (IValueGetter getter: loadedProperties) {
                 String value = getter.get(key);
                 if (value != null) {
                     return value;
@@ -65,7 +71,7 @@ public class MultiSourceConfig extends APermanentConfig {
         @Override
         public Set<String> keySet() {
             if (keySet.isEmpty()) {
-                for (IValueGetter getter : loadedProperties) {
+                for (IValueGetter getter: loadedProperties) {
                     keySet.addAll(getter.keySet());
                 }
             }

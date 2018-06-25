@@ -1,9 +1,8 @@
 package org.xblackcat.sjpu.settings.config;
 
 import javassist.ClassPool;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.xblackcat.sjpu.builder.BuilderUtils;
+import org.xblackcat.sjpu.settings.APrefixHandler;
 import org.xblackcat.sjpu.settings.SettingsException;
 import org.xblackcat.sjpu.settings.util.ClassUtils;
 import org.xblackcat.sjpu.settings.util.IValueGetter;
@@ -11,19 +10,22 @@ import org.xblackcat.sjpu.settings.util.IValueGetter;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 14.04.2014 14:43
  *
  * @author xBlackCat
  */
-abstract class APermanentConfig implements IConfig {
-    protected final Log log = LogFactory.getLog(getClass());
-    protected final ClassPool pool;
+public abstract class APermanentConfig extends AConfig implements IConfig {
     private IValueGetter loadedProperties;
 
-    APermanentConfig(ClassPool pool) {
-        this.pool = pool;
+    public APermanentConfig(
+            ClassPool pool,
+            Map<String, APrefixHandler> prefixHandlers,
+            List<IValueGetter> substitutions
+    ) {
+        super(pool, prefixHandlers, substitutions);
     }
 
     /**
@@ -73,6 +75,11 @@ abstract class APermanentConfig implements IConfig {
         List<Object> values = ClassUtils.buildConstructorParameters(pool, clazz, prefixName, loadedProperties);
 
         return ClassUtils.initialize(c, values);
+    }
+
+    @Override
+    public IValueGetter getValueGetter() {
+        return loadedProperties == null ? IValueGetter.EMPTY : loadedProperties;
     }
 
     protected abstract IValueGetter loadProperties() throws IOException;

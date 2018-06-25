@@ -1,9 +1,8 @@
 package org.xblackcat.sjpu.settings.config;
 
 import javassist.ClassPool;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.xblackcat.sjpu.builder.BuilderUtils;
+import org.xblackcat.sjpu.settings.APrefixHandler;
 import org.xblackcat.sjpu.settings.SettingsException;
 import org.xblackcat.sjpu.settings.util.ClassUtils;
 import org.xblackcat.sjpu.settings.util.IValueGetter;
@@ -22,10 +21,7 @@ import java.util.function.Consumer;
  *
  * @author xBlackCat
  */
-public class MutableConfig implements IMutableConfig, IConfig {
-    private static final Log log = LogFactory.getLog(MutableConfig.class);
-
-    protected final ClassPool pool;
+public class MutableConfig extends AConfig implements IMutableConfig, IConfig {
     private final Lock lock = new ReentrantLock();
     private final List<IConfigListener> listenerList = new ArrayList<>();
     private final Map<ConfigInfo<?>, ISettingsWrapper<?>> loadedObjects = new HashMap<>();
@@ -36,13 +32,19 @@ public class MutableConfig implements IMutableConfig, IConfig {
 
     private volatile IValueGetter loadedProperties;
 
-    public MutableConfig(ClassPool pool, Path file, Consumer<Runnable> notifyConsumer) {
-        this.pool = pool;
+    public MutableConfig(
+            ClassPool pool,
+            Map<String, APrefixHandler> prefixHandlers,
+            List<IValueGetter> substitutions,
+            Path file,
+            Consumer<Runnable> notifyConsumer
+    ) {
+        super(pool, prefixHandlers, substitutions);
         this.file = file;
         parent = file.getParent();
 
         this.notifyConsumer = notifyConsumer;
-        wrappedConfig = new InputStreamConfig(pool, () -> LoadUtils.getInputStream(file));
+        wrappedConfig = new InputStreamConfig(pool, prefixHandlers, substitutions, () -> LoadUtils.getInputStream(file));
     }
 
     @Override
@@ -78,8 +80,7 @@ public class MutableConfig implements IMutableConfig, IConfig {
             loadedObjects.put(configInfo, dw);
 
             // Wrapper also implements interface clazz
-            @SuppressWarnings("unchecked")
-            final T wrappedData = (T) dw;
+            @SuppressWarnings("unchecked") final T wrappedData = (T) dw;
             return wrappedData;
         } finally {
             lock.unlock();
@@ -111,7 +112,7 @@ public class MutableConfig implements IMutableConfig, IConfig {
         try {
             loadedProperties = properties;
 
-            for (Map.Entry<ConfigInfo<?>, ISettingsWrapper<?>> e : loadedObjects.entrySet()) {
+            for (Map.Entry<ConfigInfo<?>, ISettingsWrapper<?>> e: loadedObjects.entrySet()) {
                 try {
                     ConfigInfo<?> configInfo = e.getKey();
                     ISettingsWrapper wrapper = e.getValue();
@@ -129,7 +130,7 @@ public class MutableConfig implements IMutableConfig, IConfig {
                     }
                     updateObject(wrapper, data);
 
-                    for (IConfigListener l : listenerList) {
+                    for (IConfigListener l: listenerList) {
                         notifyConsumer.accept(() -> l.onConfigChanged(clazz, configInfo.getPrefix(), data));
                     }
                 } catch (Throwable ex) {
@@ -186,11 +187,16 @@ public class MutableConfig implements IMutableConfig, IConfig {
     }
 
     public void checkPaths(Set<Path> paths) {
-        for (Path p : paths) {
+        for (Path p: paths) {
             if (parent.resolve(p).equals(file)) {
                 reloadConfigs();
                 return;
             }
         }
+    }
+
+    @Override
+    public IValueGetter getValueGetter() {
+        return reloadFile();
     }
 }

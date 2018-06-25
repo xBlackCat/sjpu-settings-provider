@@ -297,7 +297,7 @@ public class SettingsProviderTest {
 
     @Test
     public void invalidComplexSettings() throws IOException {
-        IConfig conf = new FakeConfig(new ClassPool(true));
+        IConfig conf = new FakeConfig(new ClassPool(true), Collections.emptyMap(), Collections.emptyList());
         try {
             conf.get(InvalidComplexSettings1.class);
             Assert.fail("Exception expected");
