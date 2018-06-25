@@ -23,6 +23,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.UnaryOperator;
 
 /**
  * 14.04.2014 15:22
@@ -39,7 +40,7 @@ public final class Config {
     private static final IValueGetter JVM_VALUES_GETTER = new IValueGetter() {
         @Override
         public String get(String key) {
-            return System.getProperties().getProperty(key);
+            return System.getProperty(key);
         }
 
         @Override
@@ -48,11 +49,6 @@ public final class Config {
         }
     };
     private static final IValueGetter ENV_VALUES_GETTER = LoadUtils.wrap(System.getenv());
-
-    private static final List<IValueGetter> DEFAULT_SUBSTITUTION = Arrays.asList(
-            JVM_VALUES_GETTER,
-            ENV_VALUES_GETTER
-    );
 
     static {
         SettingsWatchingDaemon daemon = null;
@@ -96,7 +92,7 @@ public final class Config {
      * Initializes specified class with default values if any. A {@linkplain org.xblackcat.sjpu.settings.SettingsException} will be thrown
      * if the specified interface has methods without {@linkplain org.xblackcat.sjpu.settings.ann.DefaultValue} annotation
      */
-    public static final IConfig Defaults = new DefaultConfig(POOL_HOLDER.pool, Collections.emptyMap(), DEFAULT_SUBSTITUTION);
+    public static final IConfig Defaults = Builder.defaultSettings().defaults();
 
     /**
      * Builds a config reader from .properties file specified by {@linkplain java.io.File File} object.
@@ -105,11 +101,7 @@ public final class Config {
      * @return config reader
      */
     public static IConfig use(File file) {
-        if (file == null) {
-            throw new NullPointerException("File can't be null");
-        }
-
-        return use(() -> LoadUtils.getInputStream(file));
+        return Builder.defaultSettings().use(file);
     }
 
     /**
@@ -119,11 +111,7 @@ public final class Config {
      * @return config reader
      */
     public static IConfig use(Path file) {
-        if (file == null) {
-            throw new NullPointerException("File can't be null");
-        }
-
-        return use(() -> LoadUtils.getInputStream(file));
+        return Builder.defaultSettings().use(file);
     }
 
     /**
@@ -133,11 +121,7 @@ public final class Config {
      * @return config reader
      */
     public static IConfig use(URL url) {
-        if (url == null) {
-            throw new NullPointerException("Url should be set");
-        }
-
-        return use(url::openStream);
+        return Builder.defaultSettings().use(url);
     }
 
     /**
@@ -147,7 +131,7 @@ public final class Config {
      * @return config reader
      */
     public static IConfig use(String resourceName) {
-        return use(() -> LoadUtils.buildInputStreamProvider(resourceName));
+        return Builder.defaultSettings().use(resourceName);
     }
 
     /**
@@ -157,29 +141,19 @@ public final class Config {
      * @return config reader
      */
     public static IConfig use(SupplierEx<InputStream, IOException> inputStreamSupplier) {
-        return new InputStreamConfig(POOL_HOLDER.pool, Collections.emptyMap(), DEFAULT_SUBSTITUTION, inputStreamSupplier);
+        return Builder.defaultSettings().use(inputStreamSupplier);
     }
 
     public static IConfig useEnv() {
-        return new APermanentConfig(POOL_HOLDER.pool, Collections.emptyMap(), DEFAULT_SUBSTITUTION) {
-            @Override
-            protected IValueGetter loadProperties() {
-                return ENV_VALUES_GETTER;
-            }
-        };
+        return Builder.defaultSettings().useEnv();
     }
 
     public static IConfig useJvm() {
-        return new APermanentConfig(POOL_HOLDER.pool, Collections.emptyMap(), DEFAULT_SUBSTITUTION) {
-            @Override
-            protected IValueGetter loadProperties() {
-                return JVM_VALUES_GETTER;
-            }
-        };
+        return Builder.defaultSettings().useJvm();
     }
 
     public static IConfig anyOf(IConfig... sources) {
-        return new MultiSourceConfig(POOL_HOLDER.pool, Collections.emptyMap(), DEFAULT_SUBSTITUTION, sources);
+        return Builder.defaultSettings().anyOf(sources);
     }
 
     /**
@@ -191,7 +165,7 @@ public final class Config {
      *                                                       {@linkplain org.xblackcat.sjpu.settings.ann.SettingsSource @SettingsSource}
      */
     public static IConfig use(Class<?> clazz) throws SettingsException {
-        return use(extractSource(clazz));
+        return Builder.defaultSettings().use(extractSource(clazz));
     }
 
     /**
@@ -208,42 +182,23 @@ public final class Config {
      *                                                       {@linkplain org.xblackcat.sjpu.settings.ann.SettingsSource @SettingsSource}
      */
     public static <T> T get(Class<T> clazz) throws SettingsException {
-        return use(clazz).get(clazz);
+        return Builder.defaultSettings().use(clazz).get(clazz);
     }
 
     public static IMutableConfig track(Class<?> clazz) throws SettingsException, IOException, UnsupportedOperationException {
-        return track(extractSource(clazz), clazz.getClassLoader());
+        return Builder.defaultSettings().track(extractSource(clazz), clazz.getClassLoader());
     }
 
     public static IMutableConfig track(String resourceName) throws IOException, UnsupportedOperationException {
-        return track(resourceName, Config.class.getClassLoader());
+        return Builder.defaultSettings().track(resourceName, Config.class.getClassLoader());
     }
 
     public static IMutableConfig track(String resourceName, ClassLoader classLoader) throws IOException, UnsupportedOperationException {
-        try {
-            final URL resource = classLoader.getResource(resourceName);
-            if (resource == null) {
-                throw new FileNotFoundException("Resource " + resourceName + " is not found in class path");
-            }
-            if (!"file".equals(resource.getProtocol())) {
-                throw new IOException("Only resources as local files could be tracked.");
-            }
-            final Path path = Paths.get(resource.toURI());
-            return track(path);
-        } catch (URISyntaxException e) {
-            throw new IOException("Failed to get URI for the resource " + resourceName, e);
-        }
+        return Builder.defaultSettings().track(resourceName, classLoader);
     }
 
     public static IMutableConfig track(Path file) throws IOException, UnsupportedOperationException {
-        if (file == null) {
-            throw new NullPointerException("File can't be null");
-        }
-        if (EXCEPTION != null) {
-            throw EXCEPTION;
-        }
-
-        return WATCHING_DAEMON.watch(file, Collections.emptyMap(), DEFAULT_SUBSTITUTION);
+        return Builder.defaultSettings().track(file);
     }
 
     public static IMutableConfig track(File file) throws IOException, UnsupportedOperationException {
@@ -253,16 +208,24 @@ public final class Config {
         return track(file.toPath());
     }
 
-    public static Builder with(APrefixHandler prefixHandler) {
-        return new Builder().with(prefixHandler);
+    public static Builder with(String prefix, UnaryOperator<String> valueHandler) {
+        return new Builder().with(prefix, valueHandler);
     }
 
-    public static Builder substitute(IConfig substitution) throws SettingsException {
+    public static Builder substitute(Map<String, String> substitution) {
         return new Builder().substitute(substitution);
     }
 
-    public static Builder substitute(IConfig substitution, String prefixName) {
-        return new Builder().substitute(substitution, prefixName);
+    public static Builder substituteEnv() {
+        return new Builder().substituteEnv();
+    }
+
+    public static Builder substituteJvm() {
+        return new Builder().substituteJvm();
+    }
+
+    public static Builder substitute(IConfig substitution) {
+        return new Builder().substitute(substitution);
     }
 
     private static String extractSource(Class<?> clazz) throws SettingsException {
@@ -304,8 +267,8 @@ public final class Config {
 
         private IMutableConfig watch(
                 Path file,
-                Map<String, APrefixHandler> prefixHandler,
-                List<IValueGetter> subtitution
+                Map<String, UnaryOperator<String>> prefixHandler,
+                List<SupplierEx<IValueGetter, SettingsException>> subtitution
         ) throws IOException {
             lock.writeLock().lock();
             try {
@@ -390,16 +353,37 @@ public final class Config {
     }
 
     public static class Builder {
-        private final Map<String, APrefixHandler> prefixHandlers = new HashMap<>();
-        private final List<IValueGetter> substitutions = new ArrayList<>();
+        private final Map<String, UnaryOperator<String>> prefixHandlers = new HashMap<>();
+        private final List<SupplierEx<IValueGetter, SettingsException>> substitutions = new ArrayList<>();
 
-        public Builder with(APrefixHandler prefixHandler) {
-            prefixHandlers.put(prefixHandler.getPrefix(), prefixHandler);
+        private static Builder defaultSettings() {
+            Builder builder = new Builder();
+            builder.substitutions.add(() -> JVM_VALUES_GETTER);
+            builder.substitutions.add(() -> ENV_VALUES_GETTER);
+            return builder;
+        }
+
+        /**
+         * Register a value processor. If property value is started with prefix the prefix will be cut and remaining part will be passed to
+         * valueHandler
+         *
+         * @param prefix
+         * @param valueHandler
+         * @return the config builder
+         */
+        public Builder with(String prefix, UnaryOperator<String> valueHandler) {
+            prefixHandlers.put(prefix, valueHandler);
             return this;
         }
 
-        public Builder substitute(IConfig substitution) {
-            return substitute(substitution, "");
+        public Builder substituteEnv() {
+            substitutions.add(() -> ENV_VALUES_GETTER);
+            return this;
+        }
+
+        public Builder substituteJvm() {
+            substitutions.add(() -> JVM_VALUES_GETTER);
+            return this;
         }
 
         public Builder substitute(Map<String, String> substitution) {
@@ -407,16 +391,16 @@ public final class Config {
                 throw new NullPointerException("Substitution map is null");
             }
             if (!substitution.isEmpty()) {
-                substitutions.add(new MapWrapper(new HashMap<>(substitution)));
+                substitutions.add(() -> new MapWrapper(new HashMap<>(substitution)));
             }
             return this;
         }
 
-        public Builder substitute(IConfig substitution, String prefixName) {
+        public Builder substitute(IConfig substitution) {
             if (!(substitution instanceof AConfig)) {
                 throw new IllegalArgumentException("Unsupported config for substitution");
             }
-            substitutions.add(IValueGetter.withPrefix(((AConfig) substitution).getValueGetter(), prefixName));
+            substitutions.add(((AConfig) substitution)::getValueGetter);
             return this;
         }
 

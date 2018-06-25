@@ -2,11 +2,11 @@ package org.xblackcat.sjpu.settings.config;
 
 import javassist.ClassPool;
 import org.xblackcat.sjpu.builder.BuilderUtils;
-import org.xblackcat.sjpu.settings.APrefixHandler;
 import org.xblackcat.sjpu.settings.SettingsException;
 import org.xblackcat.sjpu.settings.util.ClassUtils;
 import org.xblackcat.sjpu.settings.util.IValueGetter;
 import org.xblackcat.sjpu.settings.util.LoadUtils;
+import org.xblackcat.sjpu.util.function.SupplierEx;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -15,6 +15,7 @@ import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 
 /**
  * 03.11.2016 15:03
@@ -34,8 +35,8 @@ public class MutableConfig extends AConfig implements IMutableConfig, IConfig {
 
     public MutableConfig(
             ClassPool pool,
-            Map<String, APrefixHandler> prefixHandlers,
-            List<IValueGetter> substitutions,
+            Map<String, UnaryOperator<String>> prefixHandlers,
+            List<SupplierEx<IValueGetter, SettingsException>> substitutions,
             Path file,
             Consumer<Runnable> notifyConsumer
     ) {
@@ -94,7 +95,7 @@ public class MutableConfig extends AConfig implements IMutableConfig, IConfig {
 
         try {
             @SuppressWarnings("unchecked") final Constructor<T> c = ClassUtils.getSettingsConstructor(clazz, pool);
-            List<Object> values = ClassUtils.buildConstructorParameters(pool, clazz, prefixName, loadedProperties);
+            List<Object> values = buildConstructorParameters(pool, clazz, prefixName, loadedProperties);
 
             return ClassUtils.initialize(c, values);
         } catch (SettingsException e) {

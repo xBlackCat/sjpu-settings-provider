@@ -1,7 +1,7 @@
 package org.xblackcat.sjpu.settings.config;
 
 import javassist.ClassPool;
-import org.xblackcat.sjpu.settings.APrefixHandler;
+import org.xblackcat.sjpu.settings.SettingsException;
 import org.xblackcat.sjpu.settings.util.IValueGetter;
 import org.xblackcat.sjpu.settings.util.LoadUtils;
 import org.xblackcat.sjpu.util.function.SupplierEx;
@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
+import java.util.function.UnaryOperator;
 
 /**
  * 14.04.2014 15:01
@@ -21,8 +22,8 @@ public class InputStreamConfig extends APermanentConfig {
 
     public InputStreamConfig(
             ClassPool pool,
-            Map<String, APrefixHandler> prefixHandlers,
-            List<IValueGetter> substitutions,
+            Map<String, UnaryOperator<String>> prefixHandlers,
+            List<SupplierEx<IValueGetter, SettingsException>> substitutions,
             SupplierEx<InputStream, IOException> inputStreamProvider
     ) {
         super(pool, prefixHandlers, substitutions);

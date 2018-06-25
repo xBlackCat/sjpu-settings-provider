@@ -2,11 +2,13 @@ package org.xblackcat.sjpu.settings.config;
 
 import javassist.ClassPool;
 import org.apache.commons.lang3.ArrayUtils;
-import org.xblackcat.sjpu.settings.APrefixHandler;
+import org.xblackcat.sjpu.settings.SettingsException;
 import org.xblackcat.sjpu.settings.util.IValueGetter;
+import org.xblackcat.sjpu.util.function.SupplierEx;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.function.UnaryOperator;
 
 /**
  * 12.12.2014 19:01
@@ -18,8 +20,8 @@ public class MultiSourceConfig extends APermanentConfig {
 
     public MultiSourceConfig(
             ClassPool pool,
-            Map<String, APrefixHandler> prefixHandlers,
-            List<IValueGetter> substitutions,
+            Map<String, UnaryOperator<String>> prefixHandlers,
+            List<SupplierEx<IValueGetter, SettingsException>> substitutions,
             IConfig... sources
     ) {
         super(pool, prefixHandlers, substitutions);

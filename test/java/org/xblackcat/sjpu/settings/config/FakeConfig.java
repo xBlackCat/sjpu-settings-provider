@@ -1,14 +1,16 @@
 package org.xblackcat.sjpu.settings.config;
 
 import javassist.ClassPool;
-import org.xblackcat.sjpu.settings.APrefixHandler;
+import org.xblackcat.sjpu.settings.SettingsException;
 import org.xblackcat.sjpu.settings.util.IValueGetter;
 import org.xblackcat.sjpu.settings.util.LoadUtils;
+import org.xblackcat.sjpu.util.function.SupplierEx;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.UnaryOperator;
 
 /**
  * 14.04.2014 17:07
@@ -18,8 +20,8 @@ import java.util.Map;
 public class FakeConfig extends APermanentConfig {
     public FakeConfig(
             ClassPool pool,
-            Map<String, APrefixHandler> prefixHandlers,
-            List<IValueGetter> substitutions
+            Map<String, UnaryOperator<String>> prefixHandlers,
+            List<SupplierEx<IValueGetter, SettingsException>> substitutions
     ) {
         super(pool, prefixHandlers, substitutions);
     }

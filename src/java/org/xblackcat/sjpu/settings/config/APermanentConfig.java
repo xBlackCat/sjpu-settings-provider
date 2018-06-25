@@ -2,15 +2,16 @@ package org.xblackcat.sjpu.settings.config;
 
 import javassist.ClassPool;
 import org.xblackcat.sjpu.builder.BuilderUtils;
-import org.xblackcat.sjpu.settings.APrefixHandler;
 import org.xblackcat.sjpu.settings.SettingsException;
 import org.xblackcat.sjpu.settings.util.ClassUtils;
 import org.xblackcat.sjpu.settings.util.IValueGetter;
+import org.xblackcat.sjpu.util.function.SupplierEx;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.List;
 import java.util.Map;
+import java.util.function.UnaryOperator;
 
 /**
  * 14.04.2014 14:43
@@ -22,8 +23,8 @@ public abstract class APermanentConfig extends AConfig implements IConfig {
 
     public APermanentConfig(
             ClassPool pool,
-            Map<String, APrefixHandler> prefixHandlers,
-            List<IValueGetter> substitutions
+            Map<String, UnaryOperator<String>> prefixHandlers,
+            List<SupplierEx<IValueGetter, SettingsException>> substitutions
     ) {
         super(pool, prefixHandlers, substitutions);
     }
@@ -48,38 +49,40 @@ public abstract class APermanentConfig extends AConfig implements IConfig {
 
         @SuppressWarnings("unchecked") final Constructor<T> c = ClassUtils.getSettingsConstructor(clazz, pool);
 
+        IValueGetter loadedProperties = getValueGetter();
+        
         if (loadedProperties == null) {
-            try {
-                loadedProperties = loadProperties();
-            } catch (IOException e) {
-                throw new SettingsException("Can't obtain list of values for class " + clazz, e);
-            }
-
-            if (loadedProperties == null) {
-                // Values are not loaded
-                if (ClassUtils.allMethodsHaveDefaults(clazz)) {
-                    loadedProperties = IValueGetter.EMPTY; // Avoid NPE
-                } else if (optional) {
-                    if (log.isTraceEnabled()) {
-                        log.trace(clazz.getName() + " marked as optional");
-                    }
-
-                    // Optional means no exceptions - just return null
-                    return null;
-                } else {
-                    throw new SettingsException(clazz.getName() + " has mandatory properties without default values");
+            // Values are not loaded
+            if (ClassUtils.allMethodsHaveDefaults(clazz)) {
+                loadedProperties = IValueGetter.EMPTY; // Avoid NPE
+            } else if (optional) {
+                if (log.isTraceEnabled()) {
+                    log.trace(clazz.getName() + " marked as optional");
                 }
+
+                // Optional means no exceptions - just return null
+                return null;
+            } else {
+                throw new SettingsException(clazz.getName() + " has mandatory properties without default values");
             }
         }
 
-        List<Object> values = ClassUtils.buildConstructorParameters(pool, clazz, prefixName, loadedProperties);
+        List<Object> values = buildConstructorParameters(pool, clazz, prefixName, loadedProperties);
 
         return ClassUtils.initialize(c, values);
     }
 
     @Override
-    public IValueGetter getValueGetter() {
-        return loadedProperties == null ? IValueGetter.EMPTY : loadedProperties;
+    public IValueGetter getValueGetter() throws SettingsException {
+        if (loadedProperties == null) {
+            try {
+                loadedProperties = loadProperties();
+            } catch (IOException e) {
+                throw new SettingsException("Can't obtain list of values ", e);
+            }
+
+        }
+        return loadedProperties;
     }
 
     protected abstract IValueGetter loadProperties() throws IOException;
