@@ -4,6 +4,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.xblackcat.sjpu.settings.config.IConfig;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Collections;
 
 /**
@@ -133,4 +135,27 @@ public class SubstitutionTest {
         }
     }
 
+    @Test
+    public void prefixProcessingTest() throws SettingsException {
+        {
+            Settings s = Config.with("BASE64:", v -> new String(Base64.getDecoder().decode(v), StandardCharsets.UTF_8))
+                    .use("source/prefix-settings.properties").get(Settings.class);
+
+            Assert.assertEquals(1, s.getSimpleName());
+            Assert.assertEquals(42, s.getComplexNameWithABBR());
+        }
+        {
+            Settings2 s = Config.use("source/prefix-settings-2.properties").get(Settings2.class);
+
+            Assert.assertEquals("BASE64:VEVTVA==", s.getValue());
+            Assert.assertEquals("BASE64:QW5vdGhlciB0ZXN0IHN0cmluZw==", s.getAnotherValue());
+        }
+        {
+            Settings2 s = Config.with("BASE64:", v -> new String(Base64.getDecoder().decode(v), StandardCharsets.UTF_8))
+                    .use("source/prefix-settings-2.properties").get(Settings2.class);
+
+            Assert.assertEquals("TEST", s.getValue());
+            Assert.assertEquals("Another test string", s.getAnotherValue());
+        }
+    }
 }
