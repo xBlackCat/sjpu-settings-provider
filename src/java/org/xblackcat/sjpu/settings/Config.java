@@ -8,6 +8,7 @@ import org.xblackcat.sjpu.settings.ann.SettingsSource;
 import org.xblackcat.sjpu.settings.config.*;
 import org.xblackcat.sjpu.settings.util.IValueGetter;
 import org.xblackcat.sjpu.settings.util.LoadUtils;
+import org.xblackcat.sjpu.settings.util.MapWrapper;
 import org.xblackcat.sjpu.util.function.SupplierEx;
 import org.xblackcat.sjpu.util.thread.CustomNameThreadFactory;
 
@@ -260,7 +261,7 @@ public final class Config {
         return new Builder().substitute(substitution);
     }
 
-    public static Builder substitute(IConfig substitution, String prefixName) throws SettingsException {
+    public static Builder substitute(IConfig substitution, String prefixName) {
         return new Builder().substitute(substitution, prefixName);
     }
 
@@ -397,13 +398,23 @@ public final class Config {
             return this;
         }
 
-        public Builder substitute(IConfig substitution) throws SettingsException {
+        public Builder substitute(IConfig substitution) {
             return substitute(substitution, "");
         }
 
-        public Builder substitute(IConfig substitution, String prefixName) throws SettingsException {
+        public Builder substitute(Map<String, String> substitution) {
+            if (substitution == null) {
+                throw new NullPointerException("Substitution map is null");
+            }
+            if (!substitution.isEmpty()) {
+                substitutions.add(new MapWrapper(new HashMap<>(substitution)));
+            }
+            return this;
+        }
+
+        public Builder substitute(IConfig substitution, String prefixName) {
             if (!(substitution instanceof AConfig)) {
-                throw new SettingsException("Unsupported config for substitution");
+                throw new IllegalArgumentException("Unsupported config for substitution");
             }
             substitutions.add(IValueGetter.withPrefix(((AConfig) substitution).getValueGetter(), prefixName));
             return this;
